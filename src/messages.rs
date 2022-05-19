@@ -41,7 +41,7 @@ pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
         print!(
             "{:>9} {} ? [y, n, a, q] ",
             &conjugate_with(&"e"),
-           relative_dot_file(name)
+            relative_dot_file(name)
         );
 
         stdout().flush().unwrap_or_else(|err| {

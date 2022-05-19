@@ -1,5 +1,3 @@
-use std::fs::read_dir;
-// use std::io::Result;
 use std::error::Error;
 use std::fs::metadata;
 use std::os::unix::fs::MetadataExt;
@@ -85,7 +83,7 @@ pub fn has_no_matching_target(path: &PathBuf) -> bool {
         .to_str()
         .unwrap()
         .replace(&(String::from("") + &home + "."), &repo_location);
-     metadata(base_path).is_err()
+    metadata(base_path).is_err()
 }
 
 pub fn get_dot_links(
@@ -95,7 +93,7 @@ pub fn get_dot_links(
     cb: &dyn Fn(DotEntry),
 ) -> Result<(), Box<dyn Error>> {
     if dir.is_dir() {
-        for entry in read_dir(dir)? {
+        for entry in dir.read_dir()? {
             let entry = entry?;
             let path = entry.path();
             if path.is_dir() && recurse {
@@ -120,7 +118,7 @@ pub fn find_dot_links(
     if dir.is_dir() {
         let repo = crate::REPO_LOCATION.get().unwrap().to_str().unwrap();
 
-        for entry in read_dir(dir)? {
+        for entry in dir.read_dir()? {
             let entry = entry?;
             let link = entry.path();
             if link.is_dir() && recurse {
@@ -157,4 +155,8 @@ pub fn is_invalid_to_target(entry: &PathBuf) -> bool {
     }
 
     return false;
+}
+
+pub fn is_empty(path: &PathBuf) -> bool {
+    path.is_dir() && path.read_dir().unwrap().next().is_none()
 }
