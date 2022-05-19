@@ -1,11 +1,12 @@
 use std::path::PathBuf;
 
-use std::io;
-use std::io::Write;
+use std::io::{stdin, stdout, Write};
+use std::process::exit;
 
 use crate::fs::get_dot_path;
 
 use crate::delete::DeleteOptions;
+
 
 fn relative_dot_file(entry: &PathBuf) -> String {
     entry
@@ -25,33 +26,36 @@ pub fn log_message(verb: &str, rest: &[String]) {
 }
 
 pub fn delete_prompt_help() {
-    println!("y - yes , n - no");
+    println!("y - yes , n - no, a - all, q - quit");
 }
 
-pub fn display_delete_prompt(name: &PathBuf, options: DeleteOptions) -> char {
-    let template = &options.verb_template.as_ref().unwrap();
+pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
+    let template = &options.verb_template;
     let parts: Vec<&str> = template.split('%').collect();
 
     let conjugate_with = |ending| format!("{}{}{}", parts[0], ending, parts[1]);
 
-    print!(
-        "{:>9} {} ? [y, n] ",
-        &conjugate_with(&"e"),
-        relative_dot_file(name)
-    );
-
     let mut input = String::new();
-    io::stdout().flush();
-    io::stdin().read_line(&mut input).unwrap();
+    let result = if options.without_prompting.get() {
+        "y"
+    } else {
+        print!(
+            "{:>9} {} ? [y, n, a, q] ",
+            &conjugate_with(&"e"),
+            relative_dot_file(name)
+        );
 
-    let result = input.trim();
+        stdout().flush();
+        stdin().read_line(&mut input).unwrap();
+        input.trim()
+    };
 
-    if result == "y" {
+    if result == "q" {
+        log_message("quitting", &[String::from("per user")]);
+        exit(0);
+    } else if result == "y" || result == "a" {
         log_message_for_path(&conjugate_with(&"ing"), name);
-        return 'y';
-    } else if result == "a" {
-        log_message_for_path(&conjugate_with(&"ing"), name);
-        return 'a';
+        return result.chars().nth(0).unwrap();
     } else if result == "?" {
         delete_prompt_help();
         return display_delete_prompt(name, options);

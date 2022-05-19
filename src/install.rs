@@ -13,10 +13,14 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     println!("installing...");
 
-    let mut overwrite_options = DeleteOptions {
-        implode: false,
-        without_prompting: false,
-        verb_template: Some(String::from("replac%")),
+    let overwrite_options = &DeleteOptions::new(false, false, Some(String::from("replac%")));
+
+    let process_link = |entry: DotEntry| {
+        match decide_link(entry, overwrite_options) {
+            Some(decided_link) => create_link(decided_link),
+            None => Ok(()),
+        }
+        .unwrap();
     };
 
     let home = &"home";
@@ -27,21 +31,13 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn process_link(entry: DotEntry) {
-    match decide_link(entry) {
-        Some(decided_link) => create_link(decided_link),
-        None => Ok(()),
-    }
-        .unwrap();
-}
-
 fn create_link(entry: DotEntry) -> Result<(), Box<dyn Error>> {
     create_dir_all(entry.link.parent().unwrap())?;
     symlink(entry.target, entry.link)?;
     Ok(())
 }
 
-fn decide_link(entry: DotEntry) -> Option<DotEntry> {
+fn decide_link(entry: DotEntry, overwrite_options: &DeleteOptions) -> Option<DotEntry> {
     if is_invalid_to_target(&entry.target) {
         log_message_for_path("ignoring", &entry.link);
         return None;
@@ -109,14 +105,7 @@ fn decide_link(entry: DotEntry) -> Option<DotEntry> {
         None => println!("File exists and is not a link"),
     }
 
-    if delete_prompt(
-        &entry.link,
-        DeleteOptions {
-            implode: false,
-            without_prompting: false,
-            verb_template: Some(String::from("replac%")),
-        },
-    ) {
+    if delete_prompt(&entry.link, overwrite_options) {
         return Some(entry);
     }
 
