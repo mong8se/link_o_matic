@@ -1,6 +1,7 @@
 use once_cell::sync::OnceCell;
 use std::env;
 use std::error::Error;
+use std::fs::canonicalize;
 use std::path::PathBuf;
 use std::process::exit;
 
@@ -9,7 +10,7 @@ mod fs;
 mod install;
 mod messages;
 
-const COMMANDS: [&str; 5] = ["install", "delete", "cleanup", "autocleanup", "implode"];
+const COMMANDS: [&str; 4] = ["install", "cleanup", "autocleanup", "implode"];
 
 #[derive(Debug)]
 pub struct This {
@@ -18,6 +19,7 @@ pub struct This {
 }
 
 pub static HOME: OnceCell<PathBuf> = OnceCell::new();
+pub static REPO_LOCATION: OnceCell<PathBuf> = OnceCell::new();
 pub static THIS: OnceCell<This> = OnceCell::new();
 
 pub fn run(args: &Vec<String>) -> Result<(), Box<dyn Error>> {
@@ -27,12 +29,24 @@ pub fn run(args: &Vec<String>) -> Result<(), Box<dyn Error>> {
         usage(&name);
     }
 
-    let home = PathBuf::from(env::var("HOME").unwrap_or_else(|err| {
+    let home = canonicalize(env::var("HOME").unwrap_or_else(|err| {
         eprintln!("Error reading HOME environment variable: {:?}", err);
         exit(1);
-    }));
+    }))
+    .unwrap();
 
     HOME.set(home).unwrap();
+
+    let repo_location = canonicalize(env::var("REPO_LOCATION").unwrap_or_else(|err| {
+        eprintln!(
+            "Error reading REPO_LOCATION environment variable: {:?}",
+            err
+        );
+        exit(1);
+    }))
+    .unwrap();
+
+    REPO_LOCATION.set(repo_location).unwrap();
 
     let host42 = env::var("HOST42").unwrap_or_else(|err| {
         eprintln!("Error reading HOST42 environment variable: {:?}", err);
@@ -59,19 +73,13 @@ pub fn run(args: &Vec<String>) -> Result<(), Box<dyn Error>> {
     match command {
         Some(selection) => match selection {
             &"install" => install::run(),
-            &"delete" => delete(),
-            &"cleanup" => delete(),
-            &"autocleanup" => delete(),
-            &"implode" => delete(),
+            &"cleanup" => delete::run(false, false),
+            &"autocleanup" => delete::run(false, true),
+            &"implode" => delete::run(true, false),
             _ => Ok(usage(&name)),
         },
         None => Ok(usage(&name)),
     }
-}
-
-fn delete() -> Result<(), Box<dyn Error>> {
-    println!("deleting...");
-    Ok(())
 }
 
 fn usage(cmd: &str) {

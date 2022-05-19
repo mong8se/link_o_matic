@@ -55,6 +55,32 @@ pub fn get_dot_links(
     Ok(())
 }
 
+pub fn find_dot_links(
+    dir: &PathBuf,
+    recurse: bool,
+    filter: Option<&str>,
+    cb: &dyn Fn(DotEntry),
+) -> Result<(), Box<dyn Error>> {
+    if dir.is_dir() {
+        let repo = crate::REPO_LOCATION.get().unwrap().to_str().unwrap();
+
+        for entry in read_dir(dir)? {
+            let entry = entry?;
+            let link = entry.path();
+            if link.is_dir() && recurse {
+                find_dot_links(&link, recurse, filter, cb)?;
+            } else if link.is_symlink() {
+                let target = link.read_link().unwrap();
+                if target.starts_with(repo) {
+                    cb(DotEntry { link, target })
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 pub fn is_identical(a: &dyn MetadataExt, b: &dyn MetadataExt) -> bool {
     a.dev() == b.dev() && a.ino() == b.ino()
 }
