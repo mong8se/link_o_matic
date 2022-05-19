@@ -1,6 +1,7 @@
 use std::fs::read_dir;
 // use std::io::Result;
 use std::error::Error;
+use std::fs::metadata;
 use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
 
@@ -32,6 +33,61 @@ fn link_from_dot_path(dot_path: &PathBuf, prefix_to_strip: Option<&str>) -> Path
     .collect()
 }
 
+fn replace_this_labels(entry: PathBuf) -> PathBuf {
+    let file_name = entry.file_name().unwrap().to_str().unwrap();
+
+    if file_name.starts_with('_') {
+        let this = crate::THIS.get().unwrap();
+
+        let result = PathBuf::from(
+            entry
+                .to_str()
+                .unwrap()
+                .replace(&(String::from("_") + &this.platform), &"_platform")
+                .replace(&(String::from("_") + &this.machine), &"_machine"),
+        );
+
+        return result;
+    }
+
+    return entry;
+}
+
+fn final_link_name(path: &PathBuf, prefix_to_strip: Option<&str>) -> PathBuf {
+    replace_this_labels(link_from_dot_path(path, prefix_to_strip))
+}
+
+fn final_target_name(path: &PathBuf) -> PathBuf {
+    let mut result = crate::REPO_LOCATION.get().unwrap().clone();
+    result.push(if path.is_symlink() {
+        path.read_link().unwrap()
+    } else {
+        path.clone()
+    });
+    result
+}
+
+pub fn has_bad_underscore(path: &PathBuf) -> bool {
+    let file_name = path.file_name().unwrap().to_str().unwrap();
+
+    if file_name.starts_with('_') {
+        !(file_name.starts_with(&"_machine") || file_name.starts_with(&"_platform"))
+    } else {
+        false
+    }
+}
+
+pub fn has_no_matching_target(path: &PathBuf) -> bool {
+    let home = crate::HOME.get().unwrap().to_str().unwrap();
+    let repo_location = crate::REPO_LOCATION.get().unwrap().to_str().unwrap();
+
+    let base_path = path
+        .to_str()
+        .unwrap()
+        .replace(&(String::from("") + &home + "."), &repo_location);
+     metadata(base_path).is_err()
+}
+
 pub fn get_dot_links(
     dir: &PathBuf,
     recurse: bool,
@@ -46,8 +102,8 @@ pub fn get_dot_links(
                 get_dot_links(&path, recurse, prefix_to_strip, cb)?;
             } else {
                 cb(DotEntry {
-                    link: link_from_dot_path(&entry.path(), prefix_to_strip),
-                    target: entry.path(),
+                    link: final_link_name(&entry.path(), prefix_to_strip),
+                    target: final_target_name(&entry.path()),
                 })
             }
         }
@@ -87,9 +143,10 @@ pub fn is_identical(a: &dyn MetadataExt, b: &dyn MetadataExt) -> bool {
 
 pub fn is_invalid_to_target(entry: &PathBuf) -> bool {
     let file_name = entry.file_name().unwrap().to_str().unwrap();
-    let this = crate::THIS.get().unwrap();
 
     if file_name.starts_with('_') {
+        let this = crate::THIS.get().unwrap();
+
         if file_name.starts_with(&format!("_{}", &this.platform))
             || file_name.starts_with(&format!("_{}", &this.machine))
         {

@@ -2,9 +2,9 @@ use std::cell::Cell;
 use std::error::Error;
 use std::fs::metadata;
 use std::path::PathBuf;
-// use std::fs::remove_file;
+use std::fs::remove_file;
 
-use crate::fs::{find_dot_links, get_dot_path, is_invalid_to_target, DotEntry};
+use crate::fs::{find_dot_links, get_dot_path, is_invalid_to_target, has_no_matching_target, has_bad_underscore, DotEntry};
 use crate::messages::display_delete_prompt;
 
 #[derive(Debug)]
@@ -45,7 +45,9 @@ pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>>
 pub fn decide_delete(entry: &DotEntry, delete_options: &DeleteOptions) -> bool {
     if delete_options.implode
         || is_invalid_to_target(&entry.target)
+        || has_bad_underscore(&entry.link)
         || metadata(&entry.target).is_err()
+        || has_no_matching_target(&entry.link)
     {
         return delete_prompt(&entry.link, delete_options);
     }
@@ -60,10 +62,9 @@ pub fn delete_prompt(path: &PathBuf, options: &DeleteOptions) -> bool {
     }
 
     if result == 'y' || result == 'a' {
-        // remove_file(path);
+        remove_file(path).unwrap();
 
-        // return true;
-        return false;
+        return true;
     }
     return false;
 }

@@ -1,6 +1,6 @@
 use std::env;
 use std::error::Error;
-use std::fs::{canonicalize, create_dir_all, metadata, read_link, symlink_metadata};
+use std::fs::{create_dir_all, metadata, read_link, symlink_metadata};
 use std::os::unix::fs::symlink;
 use std::path::PathBuf;
 
@@ -16,11 +16,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let overwrite_options = &DeleteOptions::new(false, false, Some(String::from("replac%")));
 
     let process_link = |entry: DotEntry| {
-        match decide_link(entry, overwrite_options) {
-            Some(decided_link) => create_link(decided_link),
-            None => Ok(()),
+        if decide_link(&entry, overwrite_options) {
+            create_link(entry).unwrap();
         }
-        .unwrap();
     };
 
     let home = &"home";
@@ -37,35 +35,22 @@ fn create_link(entry: DotEntry) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn decide_link(entry: DotEntry, overwrite_options: &DeleteOptions) -> Option<DotEntry> {
+fn decide_link(entry: &DotEntry, overwrite_options: &DeleteOptions) -> bool {
     if is_invalid_to_target(&entry.target) {
         log_message_for_path("ignoring", &entry.link);
-        return None;
+        return false;
     }
-
-    let target_resolved = canonicalize(&entry.target);
-    if target_resolved.is_err() {
-        log_message_for_path("skipping", &entry.link);
-        return None;
-    }
-
-    let target = target_resolved.unwrap();
-
-    let entry = DotEntry {
-        link: entry.link,
-        target,
-    };
 
     let new_target_stat_lookup = metadata(&entry.target);
     if new_target_stat_lookup.is_err() {
         log_message_for_path("skipping", &entry.link);
-        return None;
+        return false;
     };
 
     let link_stat_lookup = symlink_metadata(&entry.link);
     if link_stat_lookup.is_err() {
         log_message_for_path("linking", &entry.link);
-        return Some(entry);
+        return true;
     }
 
     let mut current_target_exists = false;
@@ -78,7 +63,7 @@ fn decide_link(entry: DotEntry, overwrite_options: &DeleteOptions) -> Option<Dot
             &link_target_stat_lookup.unwrap(),
         ) {
             log_message_for_path("", &entry.link);
-            return None;
+            return false;
         }
     }
 
@@ -105,9 +90,5 @@ fn decide_link(entry: DotEntry, overwrite_options: &DeleteOptions) -> Option<Dot
         None => println!("File exists and is not a link"),
     }
 
-    if delete_prompt(&entry.link, overwrite_options) {
-        return Some(entry);
-    }
-
-    return None;
+    delete_prompt(&entry.link, overwrite_options)
 }
