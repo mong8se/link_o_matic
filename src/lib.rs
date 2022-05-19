@@ -11,6 +11,7 @@ mod messages;
 
 const COMMANDS: [&str; 5] = ["install", "delete", "cleanup", "autocleanup", "implode"];
 
+#[derive(Debug)]
 pub struct This {
     platform: String,
     machine: String,
@@ -45,6 +46,10 @@ pub fn run(args: &Vec<String>) -> Result<(), Box<dyn Error>> {
             _ => String::from("unknown"),
         },
         machine: host42,
+    })
+    .unwrap_or_else(|err| {
+        eprintln!("Problem getting hostname or OS: {:?}", err);
+        exit(1);
     });
 
     let input = &args[1].to_lowercase();

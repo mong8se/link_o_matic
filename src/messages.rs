@@ -7,7 +7,6 @@ use crate::fs::get_dot_path;
 
 use crate::delete::DeleteOptions;
 
-
 fn relative_dot_file(entry: &PathBuf) -> String {
     entry
         .to_path_buf()
@@ -45,7 +44,10 @@ pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
             relative_dot_file(name)
         );
 
-        stdout().flush();
+        stdout().flush().unwrap_or_else(|err| {
+            eprintln!("Problem flushing stdout: {:?}", err);
+            exit(1);
+        });
         stdin().read_line(&mut input).unwrap();
         input.trim()
     };
