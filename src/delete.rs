@@ -1,4 +1,4 @@
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
 use std::error::Error;
 use std::fs::{metadata, remove_dir, remove_file};
 use std::path::PathBuf;
@@ -29,8 +29,10 @@ impl DeleteOptions {
     }
 }
 
-pub fn run<'a>(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>> {
+pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>> {
     let delete_options = &DeleteOptions::new(implode, without_prompting, None);
+    let dir_delete_options =
+        &DeleteOptions::new(false, false, Some(String::from("remov% empty directory")));
 
     let handle_delete = |entry: DotEntry| {
         decide_delete(&entry, delete_options);
@@ -38,15 +40,13 @@ pub fn run<'a>(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Err
 
     find_dot_links(&get_dot_path(None), false, None, &handle_delete)?;
 
-    let empty_dirs: RefCell<Vec<PathBuf>> = RefCell::new(vec![]);
-
     let handle_delete_with_directories = |entry: DotEntry| {
         if decide_delete(&entry, delete_options) {
             let parent = &entry.link.parent().unwrap();
             let parent_buf = parent.to_path_buf();
 
             if is_empty(&parent_buf) {
-                empty_dirs.borrow_mut().push(parent_buf)
+                delete_prompt(&parent_buf, dir_delete_options);
             }
         }
     };
@@ -57,13 +57,6 @@ pub fn run<'a>(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Err
         None,
         &handle_delete_with_directories,
     )?;
-
-    let dir_delete_options =
-        &DeleteOptions::new(false, false, Some(String::from("remov% empty directory")));
-
-    for dir in empty_dirs.borrow().as_slice() {
-        delete_prompt(&dir, dir_delete_options);
-    }
 
     Ok(())
 }

@@ -56,13 +56,7 @@ fn final_link_name(path: &PathBuf, prefix_to_strip: Option<&str>) -> PathBuf {
 }
 
 fn final_target_name(path: &PathBuf) -> PathBuf {
-    let mut result = crate::REPO_LOCATION.get().unwrap().clone();
-    result.push(if path.is_symlink() {
-        path.read_link().unwrap()
-    } else {
-        path.clone()
-    });
-    result
+    path.canonicalize().unwrap_or(path.to_owned())
 }
 
 pub fn has_bad_underscore(path: &PathBuf) -> bool {

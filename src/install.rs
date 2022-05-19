@@ -9,9 +9,7 @@ use crate::fs::*;
 use crate::messages::*;
 
 pub fn run() -> Result<(), Box<dyn Error>> {
-    env::set_current_dir(get_dot_path(Some(&".dotfiles")))?;
-
-    println!("installing...");
+    env::set_current_dir(crate::REPO_LOCATION.get().unwrap())?;
 
     let overwrite_options = &DeleteOptions::new(false, false, Some(String::from("replac%")));
 
