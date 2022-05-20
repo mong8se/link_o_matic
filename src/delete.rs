@@ -46,6 +46,9 @@ pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>>
             let parent_buf = parent.to_path_buf();
 
             if is_empty(&parent_buf) {
+                dir_delete_options
+                    .without_prompting
+                    .set(delete_options.without_prompting.get());
                 delete_prompt(&parent_buf, dir_delete_options);
             }
         }
