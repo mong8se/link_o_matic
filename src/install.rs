@@ -54,10 +54,9 @@ fn decide_link(entry: &DotEntry, overwrite_options: &DeleteOptions) -> bool {
     let link_stat_lookup = symlink_metadata(&entry.link);
     if link_stat_lookup.is_err() {
         Messenger::new()
-            .success()
             .with_verb("linking")
             .with_path(&entry.link)
-            .log(None);
+            .success(None);
         return true;
     }
 
@@ -81,10 +80,9 @@ fn decide_link(entry: &DotEntry, overwrite_options: &DeleteOptions) -> bool {
     }
 
     Messenger::new()
-        .warning()
         .with_verb("found")
         .with_path(&entry.link)
-        .log(Some(match old_link {
+        .warning(Some(match old_link {
             Some(link) => format!(
                 "Link already exists and points elsewhere: {} {}",
                 link.to_str().unwrap(),

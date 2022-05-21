@@ -7,6 +7,7 @@ use crate::fs::{
     find_dot_links, get_dot_path, has_bad_underscore, has_no_matching_target, is_empty,
     is_invalid_to_target, DotEntry,
 };
+
 use crate::messages::display_delete_prompt;
 
 #[derive(Debug)]
@@ -87,6 +88,7 @@ pub fn delete_prompt(path: &PathBuf, options: &DeleteOptions) -> bool {
         if path.is_symlink() {
             remove_file(path).unwrap();
         } else if path.is_dir() {
+            // hope it's empty
             remove_dir(path).unwrap();
         } else {
             // what's left?

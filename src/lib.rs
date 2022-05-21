@@ -10,6 +10,8 @@ mod fs;
 mod install;
 mod messages;
 
+use messages::Messenger;
+
 const COMMANDS: [&str; 4] = ["install", "cleanup", "autocleanup", "implode"];
 
 #[derive(Debug)]
@@ -30,7 +32,10 @@ pub fn run(args: &Vec<String>) -> Result<(), Box<dyn Error>> {
     }
 
     let home = canonicalize(env::var("HOME").unwrap_or_else(|err| {
-        eprintln!("Error reading HOME environment variable: {:?}", err);
+        Messenger::new().with_verb("Error").error(Some(format!(
+            "reading HOME environment variable: {:?}",
+            err
+        )));
         exit(1);
     }))
     .unwrap();
@@ -38,10 +43,10 @@ pub fn run(args: &Vec<String>) -> Result<(), Box<dyn Error>> {
     HOME.set(home).unwrap();
 
     let repo_location = canonicalize(env::var("REPO_LOCATION").unwrap_or_else(|err| {
-        eprintln!(
-            "Error reading REPO_LOCATION environment variable: {:?}",
+        Messenger::new().with_verb("Error").error(Some(format!(
+            "reading REPO_LOCATION environment variable: {:?}",
             err
-        );
+        )));
         exit(1);
     }))
     .unwrap();
@@ -49,7 +54,10 @@ pub fn run(args: &Vec<String>) -> Result<(), Box<dyn Error>> {
     REPO_LOCATION.set(repo_location).unwrap();
 
     let host42 = env::var("HOST42").unwrap_or_else(|err| {
-        eprintln!("Error reading HOST42 environment variable: {:?}", err);
+        Messenger::new().with_verb("Error").error(Some(format!(
+            "reading HOST42 environment variable: {:?}",
+            err
+        )));
         exit(1);
     });
 
@@ -62,7 +70,9 @@ pub fn run(args: &Vec<String>) -> Result<(), Box<dyn Error>> {
         machine: host42,
     })
     .unwrap_or_else(|err| {
-        eprintln!("Problem getting hostname or OS: {:?}", err);
+        Messenger::new()
+            .with_verb("Error")
+            .error(Some(format!("Problem getting hostname or OS: {:?}", err)));
         exit(1);
     });
 

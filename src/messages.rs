@@ -1,7 +1,7 @@
 use once_cell::sync::OnceCell;
 use std::path::PathBuf;
 
-use std::io::{stdin, stdout, Write};
+use std::io::{stderr, stdin, stdout, Write};
 use std::process::exit;
 
 use owo_colors::{OwoColorize, Style};
@@ -17,29 +17,29 @@ pub struct MessageBuilder {
 }
 
 impl MessageBuilder {
-    pub fn error(mut self) -> MessageBuilder {
-        self.log_level = LogLevel::Error;
-        self
-    }
-
-    pub fn warning(mut self) -> MessageBuilder {
-        self.log_level = LogLevel::Warning;
-        self
-    }
-
-    pub fn success(mut self) -> MessageBuilder {
-        self.log_level = LogLevel::Success;
-        self
-    }
-
-    pub fn with_path(mut self, path: &PathBuf) -> MessageBuilder {
+    pub fn with_path(mut self, path: &PathBuf) -> Self {
         self.path = Some(relative_dot_file(path));
         self
     }
 
-    pub fn with_verb(mut self, verb: &str) -> MessageBuilder {
+    pub fn with_verb(mut self, verb: &str) -> Self {
         self.verb = verb.to_string();
         self
+    }
+
+    pub fn error(mut self, rest: Option<String>) {
+        self.log_level = LogLevel::Error;
+        self.log(rest);
+    }
+
+    pub fn warning(mut self, rest: Option<String>) {
+        self.log_level = LogLevel::Warning;
+        self.log(rest);
+    }
+
+    pub fn success(mut self, rest: Option<String>) {
+        self.log_level = LogLevel::Success;
+        self.log(rest);
     }
 
     pub fn log(self, rest: Option<String>) {
@@ -86,11 +86,18 @@ impl Messenger {
             LogLevel::Error => self.error_style,
         });
 
-        println!(
-            "{:>9} {}",
+        let result = format!(
+            "{:>9} {}\n",
             styled_verb.bold(),
             join_line([options.path, rest])
-        )
+        );
+
+        let bytes = result.as_bytes();
+
+        match options.log_level {
+            LogLevel::Error => stderr().write_all(bytes).unwrap(),
+            _ => stdout().write_all(bytes).unwrap(),
+        };
     }
 }
 
@@ -154,16 +161,18 @@ pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
         exit(0);
     } else if result == "y" || result == "a" {
         Messenger::new()
-            .error()
             .with_verb(&conjugate_with(&"ing"))
             .with_path(name)
-            .log(None);
+            .success(None);
         return result.chars().nth(0).unwrap();
     } else if result == "?" {
         delete_prompt_help();
         return display_delete_prompt(name, options);
     }
 
-    Messenger::new().with_verb(&"skipping").with_path(name);
+    Messenger::new()
+        .with_verb(&"skipping")
+        .with_path(name)
+        .warning(None);
     return 'n';
 }
