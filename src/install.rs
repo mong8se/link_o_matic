@@ -21,8 +21,8 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     let home = &"home";
 
-    get_dot_links(&PathBuf::from(home), false, Some(home), &process_link)?;
-    get_dot_links(&PathBuf::from(&"config"), true, None, &process_link)?;
+    find_targets_for_linking(&PathBuf::from(home), false, Some(home), &process_link)?;
+    find_targets_for_linking(&PathBuf::from(&"config"), true, None, &process_link)?;
 
     Ok(())
 }

@@ -4,7 +4,7 @@ use std::fs::{metadata, remove_dir, remove_file};
 use std::path::PathBuf;
 
 use crate::fs::{
-    find_dot_links, get_dot_path, has_bad_underscore, has_no_matching_target, is_empty,
+    find_links_to_targets, get_dot_path, has_bad_underscore, has_no_matching_target, is_empty,
     is_invalid_to_target, DotEntry,
 };
 
@@ -39,7 +39,7 @@ pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>>
         decide_delete(&entry, delete_options);
     };
 
-    find_dot_links(&get_dot_path(None), false, None, &handle_delete)?;
+    find_links_to_targets(&get_dot_path(None), false, None, &handle_delete)?;
 
     let handle_delete_with_directories = |entry: DotEntry| {
         if decide_delete(&entry, delete_options) {
@@ -55,7 +55,7 @@ pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>>
         }
     };
 
-    find_dot_links(
+    find_links_to_targets(
         &get_dot_path(Some(".config")),
         true,
         None,

@@ -80,7 +80,7 @@ pub fn has_no_matching_target(path: &PathBuf) -> bool {
     metadata(base_path).is_err()
 }
 
-pub fn get_dot_links(
+pub fn find_targets_for_linking(
     dir: &PathBuf,
     recurse: bool,
     prefix_to_strip: Option<&str>,
@@ -91,7 +91,7 @@ pub fn get_dot_links(
             let entry = entry?;
             let path = entry.path();
             if path.is_dir() && recurse {
-                get_dot_links(&path, recurse, prefix_to_strip, cb)?;
+                find_targets_for_linking(&path, recurse, prefix_to_strip, cb)?;
             } else {
                 cb(DotEntry {
                     link: final_link_name(&entry.path(), prefix_to_strip),
@@ -103,8 +103,9 @@ pub fn get_dot_links(
     Ok(())
 }
 
-pub fn find_dot_links(
+pub fn find_links_to_targets(
     dir: &PathBuf,
+
     recurse: bool,
     filter: Option<&str>,
     cb: &dyn Fn(DotEntry),
@@ -116,7 +117,7 @@ pub fn find_dot_links(
             let entry = entry?;
             let link = entry.path();
             if link.is_dir() && recurse {
-                find_dot_links(&link, recurse, filter, cb)?;
+                find_links_to_targets(&link, recurse, filter, cb)?;
             } else if link.is_symlink() {
                 let target = link.read_link().unwrap();
                 if target.starts_with(repo) {
