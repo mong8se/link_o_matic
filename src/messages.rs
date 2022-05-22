@@ -10,13 +10,14 @@ use crate::fs::get_dot_path;
 
 use crate::delete::DeleteOptions;
 
-pub struct MessageBuilder {
+pub struct MessageBuilder<'a> {
     log_level: LogLevel,
     path: Option<String>,
     verb: String,
+    handle: &'a Messenger
 }
 
-impl MessageBuilder {
+impl MessageBuilder<'_> {
     pub fn with_path(mut self, path: &PathBuf) -> Self {
         self.path = Some(relative_dot_file(path));
         self
@@ -43,7 +44,7 @@ impl MessageBuilder {
     }
 
     pub fn log(self, rest: Option<String>) {
-        Messenger::display().log_message(self, rest);
+        self.handle.log_message(self, rest);
     }
 }
 
@@ -66,15 +67,16 @@ impl Messenger {
         }
     }
 
-    pub fn display() -> &'static Messenger {
-        INSTANCE.get_or_init(|| Messenger::init())
+    pub fn get_instance() -> &'static Messenger {
+        INSTANCE.get_or_init(|| Self::init())
     }
 
-    pub fn new() -> MessageBuilder {
+    pub fn new<'a>() -> MessageBuilder<'a> {
         MessageBuilder {
             log_level: LogLevel::Normal,
             path: None,
             verb: String::new(),
+            handle: Self::get_instance()
         }
     }
 
@@ -138,7 +140,7 @@ pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
 
     let mut input = String::new();
     let result = if options.without_prompting.get() {
-        "y"
+        'y'
     } else {
         print!(
             "{:>9} {} ? [y, n, a, q] ",
@@ -151,21 +153,21 @@ pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
             exit(1);
         });
         stdin().read_line(&mut input).unwrap();
-        input.trim()
+        input.trim().chars().nth(0).unwrap()
     };
 
-    if result == "q" {
+    if result == 'q' {
         Messenger::new()
             .with_verb("quitting")
             .log(Some(String::from("per user")));
         exit(0);
-    } else if result == "y" || result == "a" {
+    } else if result == 'y' || result == 'a' {
         Messenger::new()
             .with_verb(&conjugate_with(&"ing"))
             .with_path(name)
             .success(None);
-        return result.chars().nth(0).unwrap();
-    } else if result == "?" {
+        return result
+    } else if result == '?' {
         delete_prompt_help();
         return display_delete_prompt(name, options);
     }
