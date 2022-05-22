@@ -39,7 +39,12 @@ pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>>
         decide_delete(&entry, delete_options);
     };
 
-    find_links_to_targets(&get_dot_path(None), false, None, &handle_delete)?;
+    find_links_to_targets(
+        &get_dot_path(None),
+        false,
+        Some(&|x: &PathBuf| x.file_name().unwrap().to_str().unwrap().starts_with(".")),
+        &handle_delete,
+    )?;
 
     let handle_delete_with_directories = |entry: DotEntry| {
         if decide_delete(&entry, delete_options) {

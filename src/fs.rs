@@ -94,8 +94,8 @@ pub fn find_targets_for_linking(
                 find_targets_for_linking(&path, recurse, prefix_to_strip, cb)?;
             } else {
                 cb(DotEntry {
-                    link: final_link_name(&entry.path(), prefix_to_strip),
-                    target: final_target_name(&entry.path()),
+                    link: final_link_name(&path, prefix_to_strip),
+                    target: final_target_name(&path),
                 })
             }
         }
@@ -107,7 +107,7 @@ pub fn find_links_to_targets(
     dir: &PathBuf,
 
     recurse: bool,
-    filter: Option<&str>,
+    filter: Option<&dyn Fn(&PathBuf) -> bool>,
     cb: &dyn Fn(DotEntry),
 ) -> Result<(), Box<dyn Error>> {
     if dir.is_dir() {
@@ -118,7 +118,7 @@ pub fn find_links_to_targets(
             let link = entry.path();
             if link.is_dir() && recurse {
                 find_links_to_targets(&link, recurse, filter, cb)?;
-            } else if link.is_symlink() {
+            } else if link.is_symlink() && (filter.is_none() || filter.unwrap()(&link)) {
                 let target = link.read_link().unwrap();
                 if target.starts_with(repo) {
                     cb(DotEntry { link, target })
