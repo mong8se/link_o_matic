@@ -14,7 +14,7 @@ pub struct MessageBuilder<'a> {
     log_level: LogLevel,
     path: Option<String>,
     verb: String,
-    handle: &'a Messenger
+    handle: &'a Messenger,
 }
 
 impl MessageBuilder<'_> {
@@ -25,6 +25,11 @@ impl MessageBuilder<'_> {
 
     pub fn with_verb(mut self, verb: &str) -> Self {
         self.verb = verb.to_string();
+        self
+    }
+
+    pub fn conjugate_with(mut self, ending: &str) -> Self {
+        self.verb = conjugate_with(&self.verb, &ending);
         self
     }
 
@@ -76,7 +81,7 @@ impl Messenger {
             log_level: LogLevel::Normal,
             path: None,
             verb: String::new(),
-            handle: Self::get_instance()
+            handle: Self::get_instance(),
         }
     }
 
@@ -132,29 +137,27 @@ pub fn delete_prompt_help() {
     println!("{}", "y - yes , n - no, a - all, q - quit".yellow());
 }
 
-pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
-    let template = &options.verb_template;
+pub fn conjugate_with(template: &str, ending: &str) -> String {
     let parts: Vec<&str> = template.split('%').collect();
 
-    let conjugate_with = |ending| format!("{}{}{}", parts[0], ending, parts[1]);
+    format!("{}{}{}", parts[0], ending, parts[1])
+}
 
+pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
     let mut input = String::new();
-    let result = if options.without_prompting.get() {
-        'y'
-    } else {
-        print!(
-            "{:>9} {} ? [y, n, a, q] ",
-            &conjugate_with(&"e").bold(),
-            relative_dot_file(name)
-        );
 
-        stdout().flush().unwrap_or_else(|err| {
-            eprintln!("Problem flushing stdout: {:?}", err);
-            exit(1);
-        });
-        stdin().read_line(&mut input).unwrap();
-        input.trim().chars().nth(0).unwrap()
-    };
+    print!(
+        "{:>9} {} ? [ynaq] ",
+        conjugate_with(&options.verb_template, &"e").bold(),
+        relative_dot_file(name)
+    );
+
+    stdout().flush().unwrap_or_else(|err| {
+        eprintln!("Problem flushing stdout: {:?}", err);
+        exit(1);
+    });
+    stdin().read_line(&mut input).unwrap();
+    let result = input.trim().chars().nth(0).unwrap();
 
     if result == 'q' {
         Messenger::new()
@@ -162,19 +165,11 @@ pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
             .log(Some(String::from("per user")));
         exit(0);
     } else if result == 'y' || result == 'a' {
-        Messenger::new()
-            .with_verb(&conjugate_with(&"ing"))
-            .with_path(name)
-            .success(None);
-        return result
+        return result;
     } else if result == '?' {
         delete_prompt_help();
         return display_delete_prompt(name, options);
     }
 
-    Messenger::new()
-        .with_verb(&"skipping")
-        .with_path(name)
-        .warning(None);
     return 'n';
 }

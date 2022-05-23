@@ -4,6 +4,7 @@ use std::error::Error;
 use std::fs::canonicalize;
 use std::path::PathBuf;
 use std::process::exit;
+use std::sync::Mutex;
 
 mod delete;
 mod fs;
@@ -23,6 +24,8 @@ pub struct This {
 pub static HOME: OnceCell<PathBuf> = OnceCell::new();
 pub static REPO_LOCATION: OnceCell<PathBuf> = OnceCell::new();
 pub static THIS: OnceCell<This> = OnceCell::new();
+
+pub static DELETE_ALL: OnceCell<Mutex<bool>> = OnceCell::new();
 
 pub fn run(args: &Vec<String>) -> Result<(), Box<dyn Error>> {
     let name = &args[0];
@@ -79,6 +82,8 @@ pub fn run(args: &Vec<String>) -> Result<(), Box<dyn Error>> {
     let input = &args[1].to_lowercase();
 
     let command = COMMANDS.iter().find(|&command| command == &input.as_str());
+
+    DELETE_ALL.set(Mutex::new(false)).unwrap();
 
     match command {
         Some(selection) => match selection {

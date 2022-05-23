@@ -4,17 +4,27 @@ use std::fs::{create_dir_all, metadata, read_link, symlink_metadata};
 use std::os::unix::fs::symlink;
 use std::path::PathBuf;
 
-use crate::delete::{delete_prompt, DeleteOptions};
+use crate::delete::{decide_delete, DeleteOptions};
 use crate::fs::*;
 use crate::messages::Messenger;
 
 pub fn run() -> Result<(), Box<dyn Error>> {
     env::set_current_dir(crate::REPO_LOCATION.get().unwrap())?;
 
-    let overwrite_options = &DeleteOptions::new(false, false, Some(String::from("replac%")));
+    let replace_options = &DeleteOptions {
+        implode: true,
+        without_prompting: false,
+        verb_template: &"replac%",
+    };
+
+    let auto_replace_options = &DeleteOptions {
+        implode: true,
+        without_prompting: true,
+        verb_template: &"autoreplac%",
+    };
 
     let process_link = |entry: DotEntry| {
-        if decide_link(&entry, overwrite_options) {
+        if decide_link(&entry, replace_options, auto_replace_options) {
             create_link(entry).unwrap();
         }
     };
@@ -33,7 +43,11 @@ fn create_link(entry: DotEntry) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn decide_link(entry: &DotEntry, overwrite_options: &DeleteOptions) -> bool {
+fn decide_link(
+    entry: &DotEntry,
+    replace_options: &DeleteOptions,
+    auto_replace_options: &DeleteOptions,
+) -> bool {
     if is_invalid_to_target(&entry.target) {
         Messenger::new()
             .with_path(&entry.link)
@@ -89,11 +103,18 @@ fn decide_link(entry: &DotEntry, overwrite_options: &DeleteOptions) -> bool {
                 if current_target_exists {
                     &""
                 } else {
-                    &"(dead)"
+                    &"(dead: auto-replacing)"
                 }
             ),
             None => "File exists and is not a link".to_string(),
         }));
 
-    delete_prompt(&entry.link, overwrite_options)
+    decide_delete(
+        &entry,
+        if current_target_exists {
+            replace_options
+        } else {
+            auto_replace_options
+        },
+    )
 }

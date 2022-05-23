@@ -1,4 +1,3 @@
-use std::cell::Cell;
 use std::error::Error;
 use std::fs::{metadata, remove_dir, remove_file};
 use std::path::PathBuf;
@@ -8,32 +7,27 @@ use crate::fs::{
     is_invalid_to_target, DotEntry,
 };
 
-use crate::messages::display_delete_prompt;
+use crate::messages::{display_delete_prompt, Messenger};
+use crate::DELETE_ALL;
 
-#[derive(Debug)]
-pub struct DeleteOptions {
+#[derive(Debug, Default)]
+pub struct DeleteOptions<'a> {
     pub implode: bool,
-    pub without_prompting: Cell<bool>,
-    pub verb_template: String,
-}
-
-impl DeleteOptions {
-    pub fn new(implode: bool, without_prompting: bool, verb_template: Option<String>) -> Self {
-        Self {
-            implode,
-            without_prompting: Cell::new(without_prompting),
-            verb_template: match verb_template {
-                Some(template) => template,
-                None => String::from("delet%"),
-            },
-        }
-    }
+    pub without_prompting: bool,
+    pub verb_template: &'a str,
 }
 
 pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>> {
-    let delete_options = &DeleteOptions::new(implode, without_prompting, None);
-    let dir_delete_options =
-        &DeleteOptions::new(false, false, Some(String::from("remov% empty directory")));
+    if without_prompting {
+        let mut delete_all = DELETE_ALL.get().unwrap().lock().unwrap();
+        *delete_all = true;
+    };
+
+    let delete_options = &DeleteOptions {
+        implode,
+        without_prompting,
+        verb_template: &"delet%",
+    };
 
     let handle_delete = |entry: DotEntry| {
         decide_delete(&entry, delete_options);
@@ -46,15 +40,18 @@ pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>>
         &handle_delete,
     )?;
 
+    let dir_delete_options = &DeleteOptions {
+        implode: false,
+        without_prompting,
+        verb_template: &"remov% empty directory",
+    };
+
     let handle_delete_with_directories = |entry: DotEntry| {
         if decide_delete(&entry, delete_options) {
             let parent = &entry.link.parent().unwrap();
             let parent_buf = parent.to_path_buf();
 
             if is_empty(&parent_buf) {
-                dir_delete_options
-                    .without_prompting
-                    .set(delete_options.without_prompting.get());
                 delete_prompt(&parent_buf, dir_delete_options);
             }
         }
@@ -77,30 +74,51 @@ pub fn decide_delete(entry: &DotEntry, delete_options: &DeleteOptions) -> bool {
         || metadata(&entry.target).is_err()
         || has_no_matching_target(&entry.link)
     {
-        return delete_prompt(&entry.link, delete_options);
+        if delete_prompt(&entry.link, delete_options) {
+            if entry.link.is_symlink() {
+                remove_file(&entry.link).unwrap();
+            } else if entry.link.is_dir() {
+                // hope it's empty
+                remove_dir(&entry.link).unwrap();
+            } else {
+                eprintln!("WHAT THE");
+                // what's left?
+                return false;
+            }
+            return true;
+        }
     }
+
     false
 }
 
 pub fn delete_prompt(path: &PathBuf, options: &DeleteOptions) -> bool {
-    let result = display_delete_prompt(path, options);
+    let mut delete_all = DELETE_ALL.get().unwrap().lock().unwrap();
+
+    let result = if *delete_all || options.without_prompting {
+        'y'
+    } else {
+        display_delete_prompt(path, options)
+    };
 
     if result == 'a' {
-        options.without_prompting.set(true);
+        *delete_all = true;
     }
 
     if result == 'y' || result == 'a' {
-        if path.is_symlink() {
-            remove_file(path).unwrap();
-        } else if path.is_dir() {
-            // hope it's empty
-            remove_dir(path).unwrap();
-        } else {
-            // what's left?
-            return false;
-        }
+        Messenger::new()
+            .with_verb(&options.verb_template)
+            .conjugate_with(&"ing")
+            .with_path(path)
+            .success(None);
 
         return true;
     }
+
+    Messenger::new()
+        .with_verb(&"skipping")
+        .with_path(path)
+        .warning(None);
+
     return false;
 }
