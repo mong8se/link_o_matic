@@ -157,7 +157,8 @@ pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
         exit(1);
     });
     stdin().read_line(&mut input).unwrap();
-    let result = input.trim().chars().nth(0).unwrap();
+
+    let result = input.trim().chars().nth(0).unwrap_or('n');
 
     if result == 'q' {
         Messenger::new()
