@@ -33,9 +33,13 @@ impl MessageBuilder<'_> {
         self
     }
 
-    pub fn error(mut self, rest: Option<String>) {
+    pub fn error(mut self, rest: Option<String>) -> String {
+        if self.verb.len() < 1 {
+            self.verb = String::from("error")
+        }
         self.log_level = LogLevel::Error;
         self.log(rest);
+        exit(1);
     }
 
     pub fn warning(mut self, rest: Option<String>) {
@@ -138,10 +142,15 @@ pub fn delete_prompt_help() {
 }
 
 pub fn conjugate_with(template: &str, ending: &str) -> String {
+    if !template.contains('%') {
+        Messenger::new().error(Some(format!("template must contain a %")));
+    }
     let parts: Vec<&str> = template.split('%').collect();
 
     format!("{}{}{}", parts[0], ending, parts[1])
 }
+
+const DEFAULT_CHOICE: char = 'n';
 
 pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
     let mut input = String::new();
@@ -158,7 +167,7 @@ pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
     });
     stdin().read_line(&mut input).unwrap();
 
-    let result = input.trim().chars().nth(0).unwrap_or('n');
+    let result = input.trim().chars().nth(0).unwrap_or(DEFAULT_CHOICE);
 
     if result == 'q' {
         Messenger::new()
@@ -172,5 +181,5 @@ pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
         return display_delete_prompt(name, options);
     }
 
-    return 'n';
+    return DEFAULT_CHOICE;
 }

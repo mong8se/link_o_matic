@@ -35,33 +35,30 @@ pub fn run(args: &Vec<String>) -> Result<(), Box<dyn Error>> {
     }
 
     let home = canonicalize(env::var("HOME").unwrap_or_else(|err| {
-        Messenger::new().with_verb("Error").error(Some(format!(
+        Messenger::new().error(Some(format!(
             "reading HOME environment variable: {:?}",
             err
-        )));
-        exit(1);
+        )))
     }))
     .unwrap();
 
     HOME.set(home).unwrap();
 
     let repo_location = canonicalize(env::var("REPO_LOCATION").unwrap_or_else(|err| {
-        Messenger::new().with_verb("Error").error(Some(format!(
+        Messenger::new().error(Some(format!(
             "reading REPO_LOCATION environment variable: {:?}",
             err
-        )));
-        exit(1);
+        )))
     }))
     .unwrap();
 
     REPO_LOCATION.set(repo_location).unwrap();
 
     let host42 = env::var("HOST42").unwrap_or_else(|err| {
-        Messenger::new().with_verb("Error").error(Some(format!(
+        Messenger::new().error(Some(format!(
             "reading HOST42 environment variable: {:?}",
             err
-        )));
-        exit(1);
+        )))
     });
 
     THIS.set(This {
@@ -73,10 +70,7 @@ pub fn run(args: &Vec<String>) -> Result<(), Box<dyn Error>> {
         machine: host42,
     })
     .unwrap_or_else(|err| {
-        Messenger::new()
-            .with_verb("Error")
-            .error(Some(format!("Problem getting hostname or OS: {:?}", err)));
-        exit(1);
+        Messenger::new().error(Some(format!("Problem getting hostname or OS: {:?}", err)));
     });
 
     let input = &args[1].to_lowercase();
