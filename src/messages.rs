@@ -6,9 +6,7 @@ use std::process::exit;
 
 use owo_colors::{OwoColorize, Style};
 
-use crate::fs::get_dot_path;
-
-use crate::delete::DeleteOptions;
+use crate::{delete::DeleteOptions, fs::get_dot_path};
 
 pub struct MessageBuilder<'a> {
     log_level: LogLevel,
@@ -124,7 +122,7 @@ fn join_line(list: [Option<String>; 2]) -> String {
 fn relative_dot_file(entry: &PathBuf) -> String {
     entry
         .to_path_buf()
-        .strip_prefix(&get_dot_path(None))
+        .strip_prefix(&get_dot_path(None).unwrap())
         .unwrap()
         .display()
         .to_string()

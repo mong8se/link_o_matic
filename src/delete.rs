@@ -2,13 +2,15 @@ use std::error::Error;
 use std::fs::{metadata, remove_dir, remove_file};
 use std::path::PathBuf;
 
-use crate::fs::{
-    find_links_to_targets, get_dot_path, has_bad_underscore, has_no_matching_target, is_empty,
-    is_invalid_to_target, DotEntry,
+use crate::{
+    fs::{
+        file_name_as_str, find_links_to_targets, get_dot_path, has_bad_underscore,
+        has_no_matching_target, is_empty, is_invalid_to_target, DotEntry,
+    },
+    get_delete_all,
+    messages::display_delete_prompt,
+    Messenger,
 };
-
-use crate::messages::{display_delete_prompt, Messenger};
-use crate::DELETE_ALL;
 
 #[derive(Debug, Default)]
 pub struct DeleteOptions<'a> {
@@ -19,7 +21,7 @@ pub struct DeleteOptions<'a> {
 
 pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>> {
     if without_prompting {
-        let mut delete_all = DELETE_ALL.get().unwrap().lock().unwrap();
+        let mut delete_all = get_delete_all().lock().expect("How did I break mutex");
         *delete_all = true;
     };
 
@@ -34,9 +36,9 @@ pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>>
     };
 
     find_links_to_targets(
-        &get_dot_path(None),
+        &get_dot_path(None).unwrap(),
         false,
-        Some(&|x: &PathBuf| x.file_name().unwrap().to_str().unwrap().starts_with(".")),
+        Some(&|x: &PathBuf| file_name_as_str(x).starts_with(".")),
         &handle_delete,
     )?;
 
@@ -48,17 +50,20 @@ pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>>
 
     let handle_delete_with_directories = |entry: DotEntry| {
         if decide_delete(&entry, delete_options) {
-            let parent = &entry.link.parent().unwrap();
-            let parent_buf = parent.to_path_buf();
+            let parent = &entry
+                .link
+                .parent()
+                .map(|p| p.to_path_buf())
+                .expect("why is there no parent?");
 
-            if is_empty(&parent_buf) {
-                delete_prompt(&parent_buf, dir_delete_options);
+            if is_empty(&parent) {
+                delete_prompt(&parent, dir_delete_options);
             }
         }
     };
 
     find_links_to_targets(
-        &get_dot_path(Some(".config")),
+        &get_dot_path(Some(".config")).unwrap(),
         true,
         None,
         &handle_delete_with_directories,
@@ -75,11 +80,12 @@ pub fn decide_delete(entry: &DotEntry, delete_options: &DeleteOptions) -> bool {
         || has_no_matching_target(&entry.link)
     {
         if delete_prompt(&entry.link, delete_options) {
-            if entry.link.is_symlink() {
-                remove_file(&entry.link).unwrap();
-            } else if entry.link.is_dir() {
+            let link = &entry.link;
+            if link.is_symlink() {
+                remove_file(link).expect(format!("Couldn't delete {:?}", link).as_str());
+            } else if link.is_dir() {
                 // hope it's empty
-                remove_dir(&entry.link).unwrap();
+                remove_dir(link).expect(format!("Couldn't delete dir {:?}", link).as_str());
             } else {
                 eprintln!("WHAT THE");
                 // what's left?
@@ -93,7 +99,7 @@ pub fn decide_delete(entry: &DotEntry, delete_options: &DeleteOptions) -> bool {
 }
 
 pub fn delete_prompt(path: &PathBuf, options: &DeleteOptions) -> bool {
-    let mut delete_all = DELETE_ALL.get().unwrap().lock().unwrap();
+    let mut delete_all = get_delete_all().lock().expect("How did I break mutex");
 
     let result = if *delete_all || options.without_prompting {
         'y'

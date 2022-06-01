@@ -4,12 +4,15 @@ use std::fs::{create_dir_all, metadata, read_link, symlink_metadata};
 use std::os::unix::fs::symlink;
 use std::path::PathBuf;
 
-use crate::delete::{decide_delete, DeleteOptions};
-use crate::fs::*;
-use crate::messages::Messenger;
+use crate::{
+    delete::{decide_delete, DeleteOptions},
+    fs::{find_targets_for_linking, is_identical, is_invalid_to_target, DotEntry},
+    get_repo,
+    messages::Messenger,
+};
 
 pub fn run() -> Result<(), Box<dyn Error>> {
-    env::set_current_dir(crate::REPO_LOCATION.get().unwrap())?;
+    env::set_current_dir(get_repo())?;
 
     let replace_options = &DeleteOptions {
         implode: true,
@@ -23,9 +26,11 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         verb_template: &"autoreplac%",
     };
 
-    let process_link = |entry: DotEntry| {
+    let process_link = move |entry: DotEntry| -> Result<(), Box<dyn Error>> {
         if decide_link(&entry, replace_options, auto_replace_options) {
-            create_link(entry).unwrap();
+            create_link(entry)
+        } else {
+            Ok(())
         }
     };
 

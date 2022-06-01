@@ -15,63 +15,12 @@ use messages::Messenger;
 
 const COMMANDS: [&str; 4] = ["install", "cleanup", "autocleanup", "implode"];
 
-#[derive(Debug)]
-pub struct This {
-    platform: String,
-    machine: String,
-}
-
-pub static HOME: OnceCell<PathBuf> = OnceCell::new();
-pub static REPO_LOCATION: OnceCell<PathBuf> = OnceCell::new();
-pub static THIS: OnceCell<This> = OnceCell::new();
-
-pub static DELETE_ALL: OnceCell<Mutex<bool>> = OnceCell::new();
-
 pub fn run(args: &Vec<String>) -> Result<(), Box<dyn Error>> {
     let name = &args[0];
 
     if args.len() < 2 {
         usage(&name);
     }
-
-    let home = canonicalize(env::var("HOME").unwrap_or_else(|err| {
-        Messenger::new().error(Some(format!(
-            "reading HOME environment variable: {:?}",
-            err
-        )))
-    }))
-    .unwrap();
-
-    HOME.set(home).unwrap();
-
-    let repo_location = canonicalize(env::var("REPO_LOCATION").unwrap_or_else(|err| {
-        Messenger::new().error(Some(format!(
-            "reading REPO_LOCATION environment variable: {:?}",
-            err
-        )))
-    }))
-    .unwrap();
-
-    REPO_LOCATION.set(repo_location).unwrap();
-
-    let host42 = env::var("HOST42").unwrap_or_else(|err| {
-        Messenger::new().error(Some(format!(
-            "reading HOST42 environment variable: {:?}",
-            err
-        )))
-    });
-
-    THIS.set(This {
-        platform: match std::env::consts::OS {
-            "linux" => String::from("linux"),
-            "macos" => String::from("mac"),
-            _ => String::from("unknown"),
-        },
-        machine: host42,
-    })
-    .unwrap_or_else(|err| {
-        Messenger::new().error(Some(format!("Problem getting hostname or OS: {:?}", err)));
-    });
 
     let input = &args[1].to_lowercase();
 
@@ -89,6 +38,62 @@ pub fn run(args: &Vec<String>) -> Result<(), Box<dyn Error>> {
         },
         None => Ok(usage(&name)),
     }
+}
+
+static HOME: OnceCell<PathBuf> = OnceCell::new();
+pub fn get_home() -> &'static PathBuf {
+    HOME.get_or_init(|| canonicalize_or_bust(&get_env_or_bust("HOME")))
+}
+
+static REPO_LOCATION: OnceCell<PathBuf> = OnceCell::new();
+pub fn get_repo() -> &'static PathBuf {
+    REPO_LOCATION.get_or_init(|| canonicalize_or_bust(&get_env_or_bust("REPO_LOCATION")))
+}
+
+static DELETE_ALL: OnceCell<Mutex<bool>> = OnceCell::new();
+pub fn get_delete_all() -> &'static Mutex<bool> {
+    DELETE_ALL.get().unwrap()
+}
+
+#[derive(Debug)]
+pub struct This {
+    platform: String,
+    machine: String,
+}
+static THIS: OnceCell<This> = OnceCell::new();
+pub fn get_this() -> &'static This {
+    THIS.get_or_init(|| {
+        let machine = get_env_or_bust("HOST42");
+
+        let platform = match std::env::consts::OS {
+            "linux" => "linux",
+            "macos" => "mac",
+            _ => "unknown",
+        }
+        .into();
+
+        This { platform, machine }
+    })
+}
+
+fn get_env_or_bust(name: &str) -> String {
+    env::var(name).unwrap_or_else(|err| {
+        Messenger::new().with_verb("Error").error(Some(format!(
+            "reading {} environment variable: {:?}",
+            name, err
+        )));
+        exit(1);
+    })
+}
+
+fn canonicalize_or_bust(name: &String) -> PathBuf {
+    canonicalize(name).unwrap_or_else(|err| {
+        Messenger::new().with_verb("Error").error(Some(format!(
+            "canonicalizing {} environment variable: {:?}",
+            name, err
+        )));
+        exit(1);
+    })
 }
 
 fn usage(cmd: &str) {
