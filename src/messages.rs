@@ -135,10 +135,6 @@ enum LogLevel {
     Success,
 }
 
-pub fn delete_prompt_help() {
-    println!("{}", "y - yes , n - no, a - all, q - quit".yellow());
-}
-
 pub fn conjugate_with(template: &str, ending: &str) -> String {
     if !template.contains('%') {
         Messenger::new().error(Some(format!("template must contain a %")));
@@ -148,15 +144,32 @@ pub fn conjugate_with(template: &str, ending: &str) -> String {
     format!("{}{}{}", parts[0], ending, parts[1])
 }
 
+const CHOICES: [&str; 4] = ["yes", "no", "all", "quit"];
 const DEFAULT_CHOICE: char = 'n';
+
+pub fn delete_prompt_help() {
+    let choices = CHOICES
+        .map(|c| {
+            format!(
+                "{} - {}",
+                c.get(..1).expect("choices should at least have 1 letter"),
+                c
+            )
+        })
+        .join(", ");
+    Messenger::new().with_verb("Choose:").warning(Some(choices))
+}
 
 pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
     let mut input = String::new();
 
     print!(
-        "{:>9} {} ? [ynaq] ",
+        "{:>9} {} ? [{}] ",
         conjugate_with(&options.verb_template, &"e").bold(),
-        relative_dot_file(name)
+        relative_dot_file(name),
+        CHOICES
+            .map(|c| c.get(..1).expect("choices should have at least 1 letter"))
+            .join("")
     );
 
     stdout().flush().unwrap_or_else(|err| {
