@@ -8,3 +8,8 @@ edition = "2021"
 [dependencies]
 once_cell = "1.10.0"
 owo-colors = "3"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
