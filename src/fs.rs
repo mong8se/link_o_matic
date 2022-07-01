@@ -176,3 +176,14 @@ pub fn is_empty(path: &PathBuf) -> bool {
             .and_then(|p| Ok(p.count() == 0))
             .expect("seems you tried to read a dir you cannot read")
 }
+
+pub fn name_with_bak(path: &PathBuf) -> PathBuf {
+    path.with_extension(match path.extension() {
+        Some(e) => format!(
+            "{}.bak",
+            e.to_str()
+                .expect("Why can't this extension be cast as a str?")
+        ),
+        None => String::from("bak"),
+    })
+}

@@ -164,8 +164,9 @@ pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
     let mut input = String::new();
 
     print!(
-        "{:>9} {} ? [{}] ",
+        "{:>9}{}{} ? [{}] ",
         conjugate_with(&options.verb_template, &"e").bold(),
+        if name.is_symlink() { &" " } else { &" real " },
         relative_dot_file(name),
         CHOICES
             .map(|c| c.get(..1).expect("choices should have at least 1 letter"))

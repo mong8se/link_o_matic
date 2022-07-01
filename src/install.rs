@@ -111,7 +111,7 @@ fn decide_link(
                     &"(dead: auto-replacing)"
                 }
             ),
-            None => "File exists and is not a link".to_string(),
+            None => "File exists and is not a link, a .bak will be made".to_string(),
         }));
 
     decide_delete(

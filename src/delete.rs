@@ -1,11 +1,11 @@
 use std::error::Error;
-use std::fs::{metadata, remove_dir, remove_file};
+use std::fs::{metadata, remove_dir, remove_file, rename};
 use std::path::PathBuf;
 
 use crate::{
     fs::{
         file_name_as_str, find_links_to_targets, get_dot_path, has_bad_underscore,
-        has_no_matching_target, is_empty, is_invalid_to_target, DotEntry,
+        has_no_matching_target, is_empty, is_invalid_to_target, name_with_bak, DotEntry,
     },
     get_delete_all,
     messages::display_delete_prompt,
@@ -81,11 +81,15 @@ pub fn decide_delete(entry: &DotEntry, delete_options: &DeleteOptions) -> bool {
     {
         if delete_prompt(&entry.link, delete_options) {
             let link = &entry.link;
+
             if link.is_symlink() {
                 remove_file(link).expect(format!("Couldn't delete {:?}", link).as_str());
             } else if link.is_dir() {
                 // hope it's empty
                 remove_dir(link).expect(format!("Couldn't delete dir {:?}", link).as_str());
+            } else if link.is_file() {
+                rename(link, name_with_bak(link))
+                    .expect(format!("Couldn't rename file {:?}", link).as_str());
             } else {
                 eprintln!("WHAT THE");
                 // what's left?
