@@ -36,7 +36,7 @@ pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>>
     };
 
     find_links_to_targets(
-        &get_dot_path(None).unwrap(),
+        &get_dot_path(None),
         false,
         Some(&|x: &PathBuf| file_name_as_str(x).starts_with(".")),
         &handle_delete,
@@ -63,7 +63,7 @@ pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>>
     };
 
     find_links_to_targets(
-        &get_dot_path(Some(".config")).unwrap(),
+        &get_dot_path(Some(".config")),
         true,
         None,
         &handle_delete_with_directories,

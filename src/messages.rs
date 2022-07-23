@@ -104,9 +104,10 @@ impl Messenger {
         let bytes = result.as_bytes();
 
         match options.log_level {
-            LogLevel::Error => stderr().write_all(bytes).unwrap(),
-            _ => stdout().write_all(bytes).unwrap(),
-        };
+            LogLevel::Error => stderr().write_all(bytes),
+            _ => stdout().write_all(bytes),
+        }
+        .expect("stdout works")
     }
 }
 
@@ -122,7 +123,7 @@ fn join_line(list: [Option<String>; 2]) -> String {
 fn relative_dot_file(entry: &PathBuf) -> String {
     entry
         .to_path_buf()
-        .strip_prefix(&get_dot_path(None).unwrap())
+        .strip_prefix(&get_dot_path(None))
         .unwrap()
         .display()
         .to_string()
@@ -177,7 +178,7 @@ pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
         eprintln!("Problem flushing stdout: {:?}", err);
         exit(1);
     });
-    stdin().read_line(&mut input).unwrap();
+    stdin().read_line(&mut input).expect("stdin works");
 
     let result = input.trim().chars().nth(0).unwrap_or(DEFAULT_CHOICE);
 

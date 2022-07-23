@@ -61,47 +61,47 @@ fn decide_link(
         return false;
     }
 
-    let new_target_stat_lookup = metadata(&entry.target);
-    if new_target_stat_lookup.is_err() {
-        Messenger::new()
-            .with_verb("skipping")
-            .with_path(&entry.link)
-            .log(None);
-        return false;
+    let new_target_stat = match metadata(&entry.target) {
+        Ok(s) => s,
+        Err(_) => {
+            Messenger::new()
+                .with_verb("skipping")
+                .with_path(&entry.link)
+                .log(None);
+            return false;
+        }
     };
 
-    let link_stat_lookup = symlink_metadata(&entry.link);
-    if link_stat_lookup.is_err() {
-        Messenger::new()
-            .with_verb("linking")
-            .with_path(&entry.link)
-            .success(None);
-        return true;
-    }
+    let link_stat = match symlink_metadata(&entry.link) {
+        Ok(s) => s,
+        Err(_) => {
+            Messenger::new()
+                .with_verb("linking")
+                .with_path(&entry.link)
+                .success(None);
+            return true;
+        }
+    };
 
-    let mut current_target_exists = false;
-    let link_target_stat_lookup = metadata(&entry.link);
-    if link_target_stat_lookup.is_ok() {
-        current_target_exists = true;
-
-        if is_identical(
-            &new_target_stat_lookup.unwrap(),
-            &link_target_stat_lookup.unwrap(),
-        ) {
+    let current_target_exists = match metadata(&entry.link) {
+        Ok(current_target) if is_identical(&new_target_stat, &current_target) => {
             Messenger::new().with_path(&entry.link).log(None);
             return false;
         }
-    }
+        Ok(_) => true,
+        Err(_) => false,
+    };
 
-    let mut old_link: Option<PathBuf> = None;
-    if link_stat_lookup.unwrap().is_symlink() {
-        old_link = Some(read_link(&entry.link).unwrap());
-    }
+    let old_target = if link_stat.is_symlink() {
+        read_link(&entry.link).ok()
+    } else {
+        None
+    };
 
     Messenger::new()
         .with_verb("found")
         .with_path(&entry.link)
-        .warning(Some(match old_link {
+        .warning(Some(match old_target {
             Some(link) => format!(
                 "Link already exists and points elsewhere: {} {}",
                 link.to_str().unwrap(),

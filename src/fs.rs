@@ -21,13 +21,13 @@ impl fmt::Display for PathError {
     }
 }
 
-pub fn get_dot_path(prefix: Option<&str>) -> Option<PathBuf> {
+pub fn get_dot_path(prefix: Option<&str>) -> PathBuf {
     let base = get_home();
 
-    Some(match prefix {
+    match prefix {
         Some(val) => base.join(val),
         None => base.clone(),
-    })
+    }
 }
 
 fn link_from_dot_path(dot_path: &PathBuf, prefix_to_strip: Option<&str>) -> Option<PathBuf> {
@@ -38,7 +38,7 @@ fn link_from_dot_path(dot_path: &PathBuf, prefix_to_strip: Option<&str>) -> Opti
         None => dot_path,
     };
 
-    Some(get_dot_path(None)?.join(PathBuf::from(format!(".{}", base.to_str()?))))
+    Some(get_dot_path(None).join(PathBuf::from(format!(".{}", base.to_str()?))))
 }
 
 fn replace_this_labels(entry: PathBuf) -> Option<PathBuf> {
