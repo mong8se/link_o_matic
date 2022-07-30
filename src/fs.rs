@@ -1,4 +1,4 @@
-use crate::{get_home, get_repo, get_this};
+use crate::{get_home, get_repo, get_this, Messenger};
 use std::error::Error;
 use std::fmt;
 use std::fs::metadata;
@@ -96,23 +96,35 @@ pub fn walk_dir(
     doit: &dyn Fn(PathBuf) -> Result<(), Box<dyn Error>>
 ) -> Result<(), Box<dyn Error>> {
     if dir.is_dir() {
-        for entry in dir.read_dir().expect("CANNOT READ!!") {
-            let path = entry?.path();
-            if recurse && !path.is_symlink() && path.is_dir() {
-                walk_dir(&path, recurse, doit)?;
-            } else {
-                doit(path)?;
-            };
-        }
+        dir.read_dir().map_or_else(
+            |e| {
+                Messenger::new()
+                    .with_verb("skipping")
+                    .with_path(&dir)
+                    .warning(Some(format!("couldn't read: {}", e)));
+                Ok(())
+            },
+            |entries| -> Result<(), Box<dyn Error>> {
+                for entry in entries {
+                    let path = entry?.path();
+                    if recurse && !path.is_symlink() && path.is_dir() {
+                        walk_dir(&path, recurse, doit)?
+                    } else {
+                        doit(path)?
+                    }
+                }
+                Ok(())
+            })
+    } else {
+        Ok(())
     }
-    Ok(())
 }
 
 pub fn find_targets_for_linking(
     dir: &PathBuf,
     recurse: bool,
     prefix_to_strip: Option<&str>,
-    cb: &dyn Fn(DotEntry) -> Result<(), Box<dyn Error>>,
+    doit: &dyn Fn(DotEntry) -> Result<(), Box<dyn Error>>,
 ) -> Result<(), Box<dyn Error>> {
     walk_dir(
         dir,
@@ -121,7 +133,7 @@ pub fn find_targets_for_linking(
             final_link_name(&path, prefix_to_strip)
                 .zip(final_target_name(&path))
                 .map_or(Err(PathError.into()), |(link, target)| {
-                    cb(DotEntry { link, target })
+                    doit(DotEntry { link, target })
                 })
         })
     }
@@ -130,7 +142,7 @@ pub fn find_links_to_targets(
     dir: &PathBuf,
     recurse: bool,
     filter: Option<&dyn Fn(&PathBuf) -> bool>,
-    cb: &dyn Fn(DotEntry),
+    doit: &dyn Fn(DotEntry),
 ) -> Result<(), Box<dyn Error>> {
     let repo = get_repo();
     walk_dir(
@@ -140,7 +152,7 @@ pub fn find_links_to_targets(
             if link.is_symlink() && filter.map_or(true, |f| f(&link)) {
                 let target = link.read_link()?;
                 if target.starts_with(repo) {
-                    return Ok(cb(DotEntry { link, target }))
+                    return Ok(doit(DotEntry { link, target }))
                 }
             }
             return Ok(())
