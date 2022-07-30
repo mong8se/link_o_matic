@@ -127,7 +127,7 @@ pub fn find_links_to_targets(
         for entry in dir.read_dir()? {
             let entry = entry?;
             let link = entry.path();
-            if link.is_dir() && recurse {
+            if recurse && !link.is_symlink() && link.is_dir() {
                 find_links_to_targets(&link, recurse, filter, cb)?;
             } else if link.is_symlink() && filter.map_or(true, |f| f(&link)) {
                 let target = link.read_link()?;
