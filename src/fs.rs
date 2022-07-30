@@ -90,55 +90,61 @@ pub fn has_no_matching_target(path: &PathBuf) -> bool {
     metadata(base_path).is_err()
 }
 
-pub fn find_targets_for_linking(
+pub fn walk_dir(
     dir: &PathBuf,
     recurse: bool,
-    prefix_to_strip: Option<&str>,
-    cb: &dyn Fn(DotEntry) -> Result<(), Box<dyn Error>>,
+    doit: &dyn Fn(PathBuf) -> Result<(), Box<dyn Error>>
 ) -> Result<(), Box<dyn Error>> {
     if dir.is_dir() {
-        for entry in dir.read_dir()? {
-            let entry = entry?;
-            let path = entry.path();
+        for entry in dir.read_dir().expect("CANNOT READ!!") {
+            let path = entry?.path();
             if recurse && !path.is_symlink() && path.is_dir() {
-                find_targets_for_linking(&path, recurse, prefix_to_strip, cb)?;
+                walk_dir(&path, recurse, doit)?;
             } else {
-                final_link_name(&path, prefix_to_strip)
-                    .zip(final_target_name(&path))
-                    .map_or(Err(PathError.into()), |(link, target)| {
-                        cb(DotEntry { link, target })
-                    })?;
+                doit(path)?;
             };
         }
     }
     Ok(())
 }
 
+pub fn find_targets_for_linking(
+    dir: &PathBuf,
+    recurse: bool,
+    prefix_to_strip: Option<&str>,
+    cb: &dyn Fn(DotEntry) -> Result<(), Box<dyn Error>>,
+) -> Result<(), Box<dyn Error>> {
+    walk_dir(
+        dir,
+        recurse,
+        &|path: PathBuf| -> Result<(), Box<dyn Error>> {
+            final_link_name(&path, prefix_to_strip)
+                .zip(final_target_name(&path))
+                .map_or(Err(PathError.into()), |(link, target)| {
+                    cb(DotEntry { link, target })
+                })
+        })
+    }
+
 pub fn find_links_to_targets(
     dir: &PathBuf,
-
     recurse: bool,
     filter: Option<&dyn Fn(&PathBuf) -> bool>,
     cb: &dyn Fn(DotEntry),
 ) -> Result<(), Box<dyn Error>> {
-    if dir.is_dir() {
-        let repo = get_repo();
-
-        for entry in dir.read_dir()? {
-            let entry = entry?;
-            let link = entry.path();
-            if recurse && !link.is_symlink() && link.is_dir() {
-                find_links_to_targets(&link, recurse, filter, cb)?;
-            } else if link.is_symlink() && filter.map_or(true, |f| f(&link)) {
+    let repo = get_repo();
+    walk_dir(
+        dir,
+        recurse,
+        &|link: PathBuf| -> Result<(), Box<dyn Error>> {
+            if link.is_symlink() && filter.map_or(true, |f| f(&link)) {
                 let target = link.read_link()?;
                 if target.starts_with(repo) {
-                    cb(DotEntry { link, target })
+                    return Ok(cb(DotEntry { link, target }))
                 }
             }
-        }
-    }
-
-    Ok(())
+            return Ok(())
+        })
 }
 
 pub fn is_identical(a: &dyn MetadataExt, b: &dyn MetadataExt) -> bool {
@@ -172,9 +178,9 @@ pub fn is_invalid_to_target(entry: &PathBuf) -> bool {
 pub fn is_empty(path: &PathBuf) -> bool {
     path.is_dir()
         && path
-            .read_dir()
-            .and_then(|p| Ok(p.count() == 0))
-            .expect("seems you tried to read a dir you cannot read")
+        .read_dir()
+        .and_then(|p| Ok(p.count() == 0))
+        .expect("seems you tried to read a dir you cannot read")
 }
 
 pub fn name_with_bak(path: &PathBuf) -> PathBuf {
@@ -182,7 +188,7 @@ pub fn name_with_bak(path: &PathBuf) -> PathBuf {
         Some(e) => format!(
             "{}.bak",
             e.to_str()
-                .expect("Why can't this extension be cast as a str?")
+            .expect("Why can't this extension be cast as a str?")
         ),
         None => String::from("bak"),
     })
