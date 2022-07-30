@@ -38,6 +38,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     find_targets_for_linking(&PathBuf::from(home), false, Some(home), &process_link)?;
     find_targets_for_linking(&PathBuf::from(&"config"), true, None, &process_link)?;
+    find_targets_for_linking(&PathBuf::from(&"local"), true, None, &process_link)?;
 
     Ok(())
 }

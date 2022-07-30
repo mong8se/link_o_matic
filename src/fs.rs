@@ -100,7 +100,7 @@ pub fn find_targets_for_linking(
         for entry in dir.read_dir()? {
             let entry = entry?;
             let path = entry.path();
-            if recurse && path.is_dir() {
+            if recurse && !path.is_symlink() && path.is_dir() {
                 find_targets_for_linking(&path, recurse, prefix_to_strip, cb)?;
             } else {
                 final_link_name(&path, prefix_to_strip)

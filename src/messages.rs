@@ -178,6 +178,7 @@ pub fn display_delete_prompt(name: &PathBuf, options: &DeleteOptions) -> char {
         eprintln!("Problem flushing stdout: {:?}", err);
         exit(1);
     });
+
     stdin().read_line(&mut input).expect("stdin works");
 
     let result = input.trim().chars().nth(0).unwrap_or(DEFAULT_CHOICE);

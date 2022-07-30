@@ -69,6 +69,13 @@ pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>>
         &handle_delete_with_directories,
     )?;
 
+    find_links_to_targets(
+        &get_dot_path(Some(".local")),
+        true,
+        None,
+        &handle_delete_with_directories,
+    )?;
+
     Ok(())
 }
 
