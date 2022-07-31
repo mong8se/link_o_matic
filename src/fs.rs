@@ -93,16 +93,15 @@ pub fn has_no_matching_target(path: &PathBuf) -> bool {
 pub fn walk_dir(
     dir: &PathBuf,
     recurse: bool,
-    doit: &dyn Fn(PathBuf) -> Result<(), Box<dyn Error>>
+    doit: &dyn Fn(PathBuf) -> Result<(), Box<dyn Error>>,
 ) -> Result<(), Box<dyn Error>> {
     if dir.is_dir() {
         dir.read_dir().map_or_else(
             |e| {
-                Messenger::new()
+                Ok(Messenger::new()
                     .with_verb("skipping")
                     .with_path(&dir)
-                    .warning(Some(format!("couldn't read: {}", e)));
-                Ok(())
+                    .warning(Some(format!("couldn't read: {}", e))))
             },
             |entries| -> Result<(), Box<dyn Error>> {
                 for entry in entries {
@@ -114,7 +113,8 @@ pub fn walk_dir(
                     }
                 }
                 Ok(())
-            })
+            },
+        )
     } else {
         Ok(())
     }
@@ -135,8 +135,9 @@ pub fn find_targets_for_linking(
                 .map_or(Err(PathError.into()), |(link, target)| {
                     doit(DotEntry { link, target })
                 })
-        })
-    }
+        },
+    )
+}
 
 pub fn find_links_to_targets(
     dir: &PathBuf,
@@ -152,11 +153,12 @@ pub fn find_links_to_targets(
             if link.is_symlink() && filter.map_or(true, |f| f(&link)) {
                 let target = link.read_link()?;
                 if target.starts_with(repo) {
-                    return Ok(doit(DotEntry { link, target }))
+                    return Ok(doit(DotEntry { link, target }));
                 }
             }
-            return Ok(())
-        })
+            Ok(())
+        },
+    )
 }
 
 pub fn is_identical(a: &dyn MetadataExt, b: &dyn MetadataExt) -> bool {
@@ -190,9 +192,9 @@ pub fn is_invalid_to_target(entry: &PathBuf) -> bool {
 pub fn is_empty(path: &PathBuf) -> bool {
     path.is_dir()
         && path
-        .read_dir()
-        .and_then(|p| Ok(p.count() == 0))
-        .expect("seems you tried to read a dir you cannot read")
+            .read_dir()
+            .and_then(|p| Ok(p.count() == 0))
+            .expect("seems you tried to read a dir you cannot read")
 }
 
 pub fn name_with_bak(path: &PathBuf) -> PathBuf {
@@ -200,7 +202,7 @@ pub fn name_with_bak(path: &PathBuf) -> PathBuf {
         Some(e) => format!(
             "{}.bak",
             e.to_str()
-            .expect("Why can't this extension be cast as a str?")
+                .expect("Why can't this extension be cast as a str?")
         ),
         None => String::from("bak"),
     })

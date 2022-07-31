@@ -28,10 +28,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     let process_link = move |entry: DotEntry| -> Result<(), Box<dyn Error>> {
         if decide_link(&entry, replace_options, auto_replace_options) {
-            create_link(entry)
-        } else {
-            Ok(())
+            create_link(entry)?
         }
+        Ok(())
     };
 
     let home = &"home";
