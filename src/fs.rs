@@ -157,7 +157,7 @@ pub fn is_identical(a: &dyn MetadataExt, b: &dyn MetadataExt) -> bool {
     [a.dev(), a.ino()] == [b.dev(), b.ino()]
 }
 
-pub fn file_name_as_str(word: &PathBuf) -> &str {
+fn file_name_as_str(word: &PathBuf) -> &str {
     word.file_name()
         .and_then(|w| w.to_str())
         .expect("Why is there no file name")

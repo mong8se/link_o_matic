@@ -2,7 +2,6 @@ use std::env;
 use std::error::Error;
 use std::fs::{create_dir_all, metadata, read_link, symlink_metadata};
 use std::os::unix::fs::symlink;
-use std::path::PathBuf;
 
 use crate::{
     delete::{decide_delete, DeleteOptions},

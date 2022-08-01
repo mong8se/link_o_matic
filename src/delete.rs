@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use crate::{
     fs::{
-        file_name_as_str, find_links_to_targets, get_dot_path, has_bad_underscore,
+        find_links_to_targets, get_dot_path, has_bad_underscore,
         has_no_matching_target, is_empty, is_invalid_to_target, name_with_bak, DotEntry,
     },
     get_delete_all,
