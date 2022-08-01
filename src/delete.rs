@@ -31,24 +31,13 @@ pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>>
         verb_template: &"delet%",
     };
 
-    let handle_delete = |entry: DotEntry| {
-        decide_delete(&entry, delete_options);
-    };
-
-    find_links_to_targets(
-        &get_dot_path(None),
-        false,
-        Some(&|x: &PathBuf| file_name_as_str(x).starts_with(".")),
-        &handle_delete,
-    )?;
-
     let dir_delete_options = &DeleteOptions {
         implode: false,
         without_prompting,
         verb_template: &"remov% empty directory",
     };
 
-    let handle_delete_with_directories = |entry: DotEntry| {
+    let handle_delete = |entry: DotEntry| {
         if decide_delete(&entry, delete_options) {
             let parent = &entry
                 .link
@@ -62,19 +51,7 @@ pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>>
         }
     };
 
-    find_links_to_targets(
-        &get_dot_path(Some(".config")),
-        true,
-        None,
-        &handle_delete_with_directories,
-    )?;
-
-    find_links_to_targets(
-        &get_dot_path(Some(".local")),
-        true,
-        None,
-        &handle_delete_with_directories,
-    )?;
+    find_links_to_targets(&get_dot_path(None), &handle_delete)?;
 
     Ok(())
 }

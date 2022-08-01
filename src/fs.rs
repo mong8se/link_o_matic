@@ -64,11 +64,8 @@ fn final_link_name(path: &PathBuf, prefix_to_strip: Option<&str>) -> Option<Path
     replace_this_labels(link_from_dot_path(path, prefix_to_strip)?)
 }
 
-fn final_target_name(path: &PathBuf) -> Option<PathBuf> {
-    Some(match path.canonicalize() {
-        Ok(target) => target,
-        Err(..) => path.to_path_buf(),
-    })
+fn final_target_name(path: &PathBuf) -> PathBuf {
+    get_repo().join(path)
 }
 
 pub fn has_bad_underscore(path: &PathBuf) -> bool {
@@ -92,7 +89,6 @@ pub fn has_no_matching_target(path: &PathBuf) -> bool {
 
 pub fn walk_dir(
     dir: &PathBuf,
-    recurse: bool,
     doit: &dyn Fn(PathBuf) -> Result<(), Box<dyn Error>>,
 ) -> Result<(), Box<dyn Error>> {
     if dir.is_dir() {
@@ -106,8 +102,8 @@ pub fn walk_dir(
             |entries| -> Result<(), Box<dyn Error>> {
                 for entry in entries {
                     let path = entry?.path();
-                    if recurse && !path.is_symlink() && path.is_dir() {
-                        walk_dir(&path, recurse, doit)?
+                    if !path.is_symlink() && path.is_dir() {
+                        walk_dir(&path, doit)?
                     } else {
                         doit(path)?
                     }
@@ -121,44 +117,40 @@ pub fn walk_dir(
 }
 
 pub fn find_targets_for_linking(
-    dir: &PathBuf,
-    recurse: bool,
-    prefix_to_strip: Option<&str>,
+    dir_name: &str,
     doit: &dyn Fn(DotEntry) -> Result<(), Box<dyn Error>>,
 ) -> Result<(), Box<dyn Error>> {
-    walk_dir(
-        dir,
-        recurse,
-        &|path: PathBuf| -> Result<(), Box<dyn Error>> {
-            final_link_name(&path, prefix_to_strip)
-                .zip(final_target_name(&path))
-                .map_or(Err(PathError.into()), |(link, target)| {
-                    doit(DotEntry { link, target })
-                })
-        },
-    )
+    walk_dir(&PathBuf::from(dir_name), &|path: PathBuf| -> Result<
+        (),
+        Box<dyn Error>,
+    > {
+        final_link_name(&path, Some(dir_name))
+            .zip(Some(final_target_name(&path)))
+            .map_or(Err(PathError.into()), |(link, target)| {
+                doit(DotEntry { link, target })
+            })
+    })
 }
 
-pub fn find_links_to_targets(
-    dir: &PathBuf,
-    recurse: bool,
-    filter: Option<&dyn Fn(&PathBuf) -> bool>,
-    doit: &dyn Fn(DotEntry),
-) -> Result<(), Box<dyn Error>> {
+pub fn find_links_to_targets(dir: &PathBuf, doit: &dyn Fn(DotEntry)) -> Result<(), Box<dyn Error>> {
     let repo = get_repo();
-    walk_dir(
-        dir,
-        recurse,
-        &|link: PathBuf| -> Result<(), Box<dyn Error>> {
-            if link.is_symlink() && filter.map_or(true, |f| f(&link)) {
-                let target = link.read_link()?;
-                if target.starts_with(repo) {
-                    return Ok(doit(DotEntry { link, target }));
-                }
+    walk_dir(dir, &|link: PathBuf| -> Result<(), Box<dyn Error>> {
+        if link.is_symlink() && home_path_starts_with_dot(&link) {
+            let target = link.read_link()?;
+            if target.starts_with(repo) {
+                return Ok(doit(DotEntry { link, target }));
             }
-            Ok(())
-        },
-    )
+        }
+
+        Ok(())
+    })
+}
+
+fn home_path_starts_with_dot(path: &PathBuf) -> bool {
+    let relative_path = &path.strip_prefix(get_dot_path(None));
+    relative_path.as_ref().map_or(false, |rp| {
+        rp.to_str().map_or(false, |p| p.starts_with("."))
+    })
 }
 
 pub fn is_identical(a: &dyn MetadataExt, b: &dyn MetadataExt) -> bool {

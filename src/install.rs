@@ -33,11 +33,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         Ok(())
     };
 
-    let home = &"home";
-
-    find_targets_for_linking(&PathBuf::from(home), false, Some(home), &process_link)?;
-    find_targets_for_linking(&PathBuf::from(&"config"), true, None, &process_link)?;
-    find_targets_for_linking(&PathBuf::from(&"local"), true, None, &process_link)?;
+    find_targets_for_linking(&"home", &process_link)?;
 
     Ok(())
 }
@@ -63,11 +59,11 @@ fn decide_link(
 
     let new_target_stat = match metadata(&entry.target) {
         Ok(s) => s,
-        Err(_) => {
+        Err(e) => {
             Messenger::new()
                 .with_verb("skipping")
                 .with_path(&entry.link)
-                .log(None);
+                .warning(Some(format!("Broken link: {}", e)));
             return false;
         }
     };
