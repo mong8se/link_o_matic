@@ -98,9 +98,14 @@ fn canonicalize_or_bust(name: &String) -> PathBuf {
 
 fn usage(cmd: &str) {
     println!(
-        "Usage: {} <command>
+        "
+link_o_matic v{}
 
-Commands: {}",
+Usage: {} <command>
+
+Commands: {}
+",
+        env!("CARGO_PKG_VERSION"),
         cmd,
         COMMANDS.join(" ")
     );

@@ -25,7 +25,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         verb_template: &"autoreplac%",
     };
 
-    let process_link = move |entry: DotEntry| -> Result<(), Box<dyn Error>> {
+    let process_link = |entry: DotEntry| -> Result<(), Box<dyn Error>> {
         if decide_link(&entry, replace_options, auto_replace_options) {
             create_link(entry)?
         }
@@ -38,7 +38,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 }
 
 fn create_link(entry: DotEntry) -> Result<(), Box<dyn Error>> {
-    create_dir_all(entry.link.parent().unwrap())?;
+    create_dir_all(entry.link.parent().expect("What is this at the root?"))?;
     symlink(entry.target, entry.link)?;
     Ok(())
 }
@@ -87,11 +87,11 @@ fn decide_link(
         Err(_) => false,
     };
 
-    let old_target = if link_stat.is_symlink() {
-        read_link(&entry.link).ok()
-    } else {
-        None
-    };
+    let old_target_link = link_stat
+        .is_symlink()
+        .then(|| read_link(&entry.link))
+        .and_then(|p| p.ok());
+    let old_target = old_target_link.as_ref().and_then(|p| p.to_str());
 
     Messenger::new()
         .with_verb("found")
@@ -99,7 +99,7 @@ fn decide_link(
         .warning(Some(match old_target {
             Some(link) => format!(
                 "Link already exists and points elsewhere: {} {}",
-                link.to_str().unwrap(),
+                link,
                 if current_target_exists {
                     &""
                 } else {

@@ -124,9 +124,8 @@ fn relative_dot_file(entry: &PathBuf) -> String {
     entry
         .to_path_buf()
         .strip_prefix(&get_dot_path(None))
-        .unwrap()
-        .display()
-        .to_string()
+        .map( |p| { p.display().to_string()})
+        .expect("to be able to parse this path.")
 }
 
 enum LogLevel {

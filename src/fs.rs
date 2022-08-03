@@ -132,22 +132,10 @@ pub fn find_targets_for_linking(
     })
 }
 
-pub fn find_links_to_targets(dir: &PathBuf, doit: &dyn Fn(DotEntry)) -> Result<(), Box<dyn Error>> {
+pub fn find_links_to_targets(
+    process: &dyn Fn(PathBuf) -> Result<(), Box<dyn Error>>,
+) -> Result<(), Box<dyn Error>> {
     let repo = get_repo();
-
-    let process = |link: PathBuf| -> Result<(), Box<dyn Error>> {
-        if link.is_symlink() && home_path_starts_with_dot(&link) {
-            let target = link.read_link().expect("is_symlink, what gives?");
-            if target.starts_with(repo) {
-                doit(DotEntry {
-                    link: link.to_path_buf(),
-                    target,
-                });
-                return Ok(());
-            }
-        }
-        Ok(())
-    };
 
     // Check at root of ~
     for entry in get_dot_path(None).read_dir()? {
@@ -170,7 +158,7 @@ pub fn find_links_to_targets(dir: &PathBuf, doit: &dyn Fn(DotEntry)) -> Result<(
     Ok(())
 }
 
-fn home_path_starts_with_dot(path: &PathBuf) -> bool {
+pub fn home_path_starts_with_dot(path: &PathBuf) -> bool {
     let relative_path = &path.strip_prefix(get_dot_path(None));
     relative_path.as_ref().map_or(false, |rp| {
         rp.to_str().map_or(false, |p| p.starts_with("."))

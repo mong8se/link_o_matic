@@ -4,10 +4,10 @@ use std::path::PathBuf;
 
 use crate::{
     fs::{
-        find_links_to_targets, get_dot_path, has_bad_underscore,
-        has_no_matching_target, is_empty, is_invalid_to_target, name_with_bak, DotEntry,
+        find_links_to_targets, has_bad_underscore, has_no_matching_target,
+        home_path_starts_with_dot, is_empty, is_invalid_to_target, name_with_bak, DotEntry,
     },
-    get_delete_all,
+    get_delete_all, get_repo,
     messages::display_delete_prompt,
     Messenger,
 };
@@ -37,21 +37,35 @@ pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>>
         verb_template: &"remov% empty directory",
     };
 
-    let handle_delete = |entry: DotEntry| {
-        if decide_delete(&entry, delete_options) {
-            let parent = &entry
-                .link
-                .parent()
-                .map(|p| p.to_path_buf())
-                .expect("why is there no parent?");
+    let repo = get_repo();
 
-            if is_empty(&parent) {
-                delete_prompt(&parent, dir_delete_options);
+    let handle_delete = &|link: PathBuf| -> Result<(), Box<dyn Error>> {
+        if link.is_symlink() && home_path_starts_with_dot(&link) {
+            let target = link.read_link().expect("is_symlink, what gives?");
+
+            if target.starts_with(repo) {
+                let entry = DotEntry {
+                    link: link.to_path_buf(),
+                    target,
+                };
+
+                if decide_delete(&entry, delete_options) {
+                    let parent = &entry
+                        .link
+                        .parent()
+                        .map(|p| p.to_path_buf())
+                        .expect("why is there no parent?");
+
+                    if is_empty(&parent) {
+                        delete_prompt(&parent, dir_delete_options);
+                    }
+                }
             }
         }
+        Ok(())
     };
 
-    find_links_to_targets(&get_dot_path(None), &handle_delete)?;
+    find_links_to_targets(&handle_delete)?;
 
     Ok(())
 }
