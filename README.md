@@ -39,6 +39,13 @@ If it is a symlink, a symlink is made to its target.
 ### cleanup
 
 Looks for links in ~ that link to something in `REPO_LOCATION/home`
+Look in the root of ~, or recursively through any ~/dir that has a
+matching REPO_LOCATION/home/dir to avoid scanning through the entire
+home directory. So if you remove a top level directory you'll leave
+orphaned links at this point, unless you remove them from the repo first
+and cleanup before removing the top level directory.
+TODO: is there a better way?
+
 If it's a broken or invalid link, prompts to delete.
 
 ### autocleanup

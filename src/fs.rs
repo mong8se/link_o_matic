@@ -134,16 +134,40 @@ pub fn find_targets_for_linking(
 
 pub fn find_links_to_targets(dir: &PathBuf, doit: &dyn Fn(DotEntry)) -> Result<(), Box<dyn Error>> {
     let repo = get_repo();
-    walk_dir(dir, &|link: PathBuf| -> Result<(), Box<dyn Error>> {
+
+    let process = |link: PathBuf| -> Result<(), Box<dyn Error>> {
         if link.is_symlink() && home_path_starts_with_dot(&link) {
-            let target = link.read_link()?;
+            let target = link.read_link().expect("is_symlink, what gives?");
             if target.starts_with(repo) {
-                return Ok(doit(DotEntry { link, target }));
+                doit(DotEntry {
+                    link: link.to_path_buf(),
+                    target,
+                });
+                return Ok(());
             }
         }
-
         Ok(())
-    })
+    };
+
+    // Check at root of ~
+    for entry in get_dot_path(None).read_dir()? {
+        let path = entry?.path();
+        process(path)?;
+    }
+
+    // for every directory in root of .dotfiles/home/
+    // check correspondingly name directory in ~/
+    for entry in repo.join("home").read_dir()? {
+        let path = entry?.path();
+        if path.is_dir() {
+            let dirname = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .map(|name| format!(".{}", name));
+            walk_dir(&get_dot_path(dirname.as_deref()), &process)?;
+        }
+    }
+    Ok(())
 }
 
 fn home_path_starts_with_dot(path: &PathBuf) -> bool {
