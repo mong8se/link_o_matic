@@ -13,7 +13,7 @@ mod messages;
 
 use messages::Messenger;
 
-const COMMANDS: [&str; 4] = ["install", "cleanup", "autocleanup", "implode"];
+const COMMANDS: [&str; 5] = ["install", "cleanup", "sync", "autocleanup", "implode"];
 
 pub fn run(args: &Vec<String>) -> Result<(), Box<dyn Error>> {
     let name = &args[0];
@@ -34,6 +34,10 @@ pub fn run(args: &Vec<String>) -> Result<(), Box<dyn Error>> {
             &"cleanup" => delete::run(false, false),
             &"autocleanup" => delete::run(false, true),
             &"implode" => delete::run(true, false),
+            &"sync" => {
+                install::run()?;
+                delete::run(false, false)
+            }
             _ => Ok(usage(&name)),
         },
         None => Ok(usage(&name)),
