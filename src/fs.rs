@@ -1,7 +1,7 @@
 use crate::{get_home, get_repo, get_this, Messenger};
 use std::error::Error;
 use std::fmt;
-use std::fs::metadata;
+use std::fs::{canonicalize, metadata};
 use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
 
@@ -65,7 +65,16 @@ fn final_link_name(path: &PathBuf, prefix_to_strip: Option<&str>) -> Option<Path
 }
 
 fn final_target_name(path: &PathBuf) -> PathBuf {
-    get_repo().join(path)
+    if path.is_symlink() {
+        return canonicalize(
+            get_repo()
+                .join(path.parent().expect("Why is there no parent?"))
+                .join(path.read_link().expect("Why can't this be read?")),
+        )
+        .expect("Why can't I canonicalize this?");
+    } else {
+        return get_repo().join(path);
+    }
 }
 
 pub fn has_bad_underscore(path: &PathBuf) -> bool {
