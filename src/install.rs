@@ -6,12 +6,12 @@ use std::os::unix::fs::symlink;
 use crate::{
     delete::{decide_delete, DeleteOptions},
     fs::{find_targets_for_linking, is_identical, is_invalid_to_target, DotEntry},
-    get_repo,
+    get_root,
     messages::Messenger,
 };
 
 pub fn run() -> Result<(), Box<dyn Error>> {
-    env::set_current_dir(get_repo())?;
+    env::set_current_dir(get_root())?;
 
     let replace_options = &DeleteOptions {
         implode: true,

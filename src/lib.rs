@@ -49,9 +49,9 @@ pub fn get_home() -> &'static PathBuf {
     HOME.get_or_init(|| canonicalize_or_bust(&get_env_or_bust("HOME")))
 }
 
-static REPO_LOCATION: OnceCell<PathBuf> = OnceCell::new();
-pub fn get_repo() -> &'static PathBuf {
-    REPO_LOCATION.get_or_init(|| canonicalize_or_bust(&get_env_or_bust("REPO_LOCATION")))
+static LINKOMATIC_ROOT: OnceCell<PathBuf> = OnceCell::new();
+pub fn get_root() -> &'static PathBuf {
+    LINKOMATIC_ROOT.get_or_init(|| canonicalize_or_bust(&get_env_or_bust("LINKOMATIC_ROOT")))
 }
 
 static DELETE_ALL: OnceCell<Mutex<bool>> = OnceCell::new();
@@ -67,7 +67,7 @@ pub struct This {
 static THIS: OnceCell<This> = OnceCell::new();
 pub fn get_this() -> &'static This {
     THIS.get_or_init(|| {
-        let machine = get_env_or_bust("HOST42");
+        let machine = get_env_or_bust("LINKOMATIC_HOSTNAME");
 
         let platform = match std::env::consts::OS {
             "linux" => "linux",

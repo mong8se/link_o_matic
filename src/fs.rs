@@ -1,4 +1,4 @@
-use crate::{get_home, get_repo, get_this, Messenger};
+use crate::{get_home, get_root, get_this, Messenger};
 use std::error::Error;
 use std::fmt;
 use std::fs::{canonicalize, metadata};
@@ -65,15 +65,16 @@ fn final_link_name(path: &PathBuf, prefix_to_strip: Option<&str>) -> Option<Path
 }
 
 fn final_target_name(path: &PathBuf) -> PathBuf {
+    let root = get_root();
+
     if path.is_symlink() {
         return canonicalize(
-            get_repo()
-                .join(path.parent().expect("Why is there no parent?"))
+            root.join(path.parent().expect("Why is there no parent?"))
                 .join(path.read_link().expect("Why can't this be read?")),
         )
         .expect("Why can't I canonicalize this?");
     } else {
-        return get_repo().join(path);
+        return root.join(path);
     }
 }
 
@@ -88,10 +89,10 @@ pub fn has_bad_underscore(path: &PathBuf) -> bool {
 }
 
 pub fn has_no_matching_target(path: &PathBuf) -> bool {
-    let [name, home, repo] =
-        [path, get_home(), get_repo()].map(|buf| buf.to_str().expect("why no strings?"));
+    let [name, home, root] =
+        [path, get_home(), get_root()].map(|buf| buf.to_str().expect("why no strings?"));
 
-    let base_path = name.replace(&(String::from("") + home + "."), repo);
+    let base_path = name.replace(&(String::from("") + home + "."), root);
 
     metadata(base_path).is_err()
 }
@@ -144,7 +145,7 @@ pub fn find_targets_for_linking(
 pub fn find_links_to_targets(
     process: &dyn Fn(PathBuf) -> Result<(), Box<dyn Error>>,
 ) -> Result<(), Box<dyn Error>> {
-    let repo = get_repo();
+    let root = get_root();
 
     // Check at root of ~
     for entry in get_dot_path(None).read_dir()? {
@@ -154,7 +155,7 @@ pub fn find_links_to_targets(
 
     // for every directory in root of .dotfiles/home/
     // check correspondingly name directory in ~/
-    for entry in repo.join("home").read_dir()? {
+    for entry in root.join("home").read_dir()? {
         let path = entry?.path();
         if path.is_dir() {
             let dirname = path

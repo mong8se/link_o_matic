@@ -7,7 +7,7 @@ use crate::{
         find_links_to_targets, has_bad_underscore, has_no_matching_target,
         home_path_starts_with_dot, is_empty, is_invalid_to_target, name_with_bak, DotEntry,
     },
-    get_delete_all, get_repo,
+    get_delete_all, get_root,
     messages::display_delete_prompt,
     Messenger,
 };
@@ -37,13 +37,13 @@ pub fn run(implode: bool, without_prompting: bool) -> Result<(), Box<dyn Error>>
         verb_template: &"remov% empty directory",
     };
 
-    let repo = get_repo();
+    let root = get_root();
 
     let handle_delete = &|link: PathBuf| -> Result<(), Box<dyn Error>> {
         if link.is_symlink() && home_path_starts_with_dot(&link) {
             let target = link.read_link().expect("is_symlink, what gives?");
 
-            if target.starts_with(repo) {
+            if target.starts_with(root) {
                 let entry = DotEntry {
                     link: link.to_path_buf(),
                     target,
