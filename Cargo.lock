@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "link_o_matic"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "once_cell",
  "owo-colors",

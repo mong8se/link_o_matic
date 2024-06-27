@@ -64,18 +64,34 @@ fn final_link_name(path: &PathBuf, prefix_to_strip: Option<&str>) -> Option<Path
     replace_this_labels(link_from_dot_path(path, prefix_to_strip)?)
 }
 
-fn final_target_name(path: &PathBuf) -> PathBuf {
+fn final_target_name(path: &PathBuf) -> Option<PathBuf> {
     let root = get_root();
 
-    if path.is_symlink() {
-        return canonicalize(
-            root.join(path.parent().expect("Why is there no parent?"))
-                .join(path.read_link().expect("Why can't this be read?")),
-        )
-        .expect("Why can't I canonicalize this?");
-    } else {
-        return root.join(path);
+    if !(path.is_symlink()) {
+        return Some(root.join(path));
     }
+
+    let sub_target = path.read_link().expect("Why can I not read this link?");
+
+    if sub_target.is_absolute() {
+        Messenger::new()
+            .with_verb("skipping")
+            .with_path(&root.join(path))
+            .warning(Some(format!(
+                "Absolute paths not supported, links to: {}",
+                &sub_target.display()
+            )));
+
+        return None;
+    }
+
+    return Some(
+        canonicalize(
+            root.join(path.parent().expect("Why is there no parent?"))
+                .join(sub_target),
+        )
+        .expect("Why can't I canonicalize this?"),
+    );
 }
 
 pub fn has_bad_underscore(path: &PathBuf) -> bool {
@@ -134,11 +150,14 @@ pub fn find_targets_for_linking(
         (),
         Box<dyn Error>,
     > {
-        final_link_name(&path, Some(dir_name))
-            .zip(Some(final_target_name(&path)))
-            .map_or(Err(PathError.into()), |(link, target)| {
-                doit(DotEntry { link, target })
-            })
+        match (
+            final_link_name(&path, Some(dir_name)),
+            final_target_name(&path),
+        ) {
+            (Some(link), Some(target)) => doit(DotEntry { link, target }),
+            (Some(_), None) => Ok(()),
+            _ => Err(PathError.into()),
+        }
     })
 }
 
