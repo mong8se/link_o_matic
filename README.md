@@ -4,30 +4,36 @@
 
 ### just one more dot file symlinker_o_matic
 
-#### uses convention over configuration principle
+NOTE THIS IS BETA AND ONLY USED BY ME SO MAYBE DON'T USE THE DELETE
+FUNCTIONS UNTIL YOU ARE SURE I KNOW WHAT I AM DOING -- But I've been
+using it without accidentally deleting files so far.
+
+#### uses convention over configuration principle:
 
 Expects an environment variable LINKOMATIC_ROOT which points to where
-dotfiles are checked out. Doesn't have to always be set, just need to
+dotfiles are checked out. Doesn't have to be exported, just need to
 set it when you run link_o_matic
 
 Expects an environment variable LINKOMATIC_HOSTNAME which is whatever
 string you want to represent the host you are on. Can be the same as
-HOSTNAME or different if you want to obfuscate the files for that host
-in your repo.
+HOSTNAME or different if you want to obfuscate your host names in your
+git repo.
 
-Any files that begin with _${LINKOMATIC_HOSTNAME} will only be
-symlinked. Other machines should get their own dang LINKOMATIC_HOSTNAME.
-When symlinked it will be renamed _machine so you can just source that
-file without knowing which hostname.
+Any files that begin with an underscore will only be symlinked IF:
+  * They start with `_${LINKOMATIC_HOSTNAME}`
+    * Will be symlinked as `_machine` and the rest
+      * For example `_bob.nvim.lua` will get linked as `_machine.nvim.lua` only on host bob
+    * Other machines should get their own dang LINKOMATIC_HOSTNAME
+  * They start with one of `_mac` `_linux` and your OS is mac or linux
+    * Will be symlinked as `_platform`
+      * For example `_mac.fish` will get linked as `_platform.fish` only on a mac
 
-Any files that begin with _mac or _linux will only be symlinked on that
-host. When symlinked it will be renamed _platform so you can just source
-that file without knowing which platform.
-
+This way your config files can reference your `_machine` and `_platform`
+files and not have to know the actual names.
 
 ## Commands
 
-install cleanup sync autocleanup implode
+`install cleanup sync autocleanup implode`
 
 ### install
 
