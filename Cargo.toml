@@ -2,6 +2,12 @@
 name = "link_o_matic"
 version = "0.4.1"
 edition = "2021"
+readme = "README.md"
+repository = "https://github.com/mong8se/link_o_matic"
+description = "A dotfile symlink manager with a convention over configuration philosophy"
+license = "GPL-3.0"
+keywords = ["dotfile", "symlink", "home", "config"]
+categories = ["command-line-utilities", "config", "filesystem"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
