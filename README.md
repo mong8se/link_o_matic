@@ -14,6 +14,13 @@ Expects an environment variable LINKOMATIC_ROOT which points to where
 dotfiles are checked out. Doesn't have to be exported, just need to
 set it when you run link_o_matic
 
+Inside your LINKOMATIC_ROOT you'll make a directory called `home`
+which will be the files/dirs you'll want linked without the
+leading `.` in the names
+Examples:
+  * `home/thing` will get linked to `~/.thing`
+  * `home/config/other_thing` will get linked to `~/.config/other_thing`
+
 Expects an environment variable LINKOMATIC_HOSTNAME which is whatever
 string you want to represent the host you are on. Can be the same as
 HOSTNAME or different if you want to obfuscate your host names in your
@@ -42,6 +49,7 @@ Starts in `LINKOMATIC_ROOT/home`
 If it is a dir, it is recursed.
 If it is a file, a symlink is made to it.
 If it is a symlink, a symlink is made to its target.
+Its name will have a `.` prepended
 
 ### cleanup
 
