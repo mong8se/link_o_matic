@@ -85,13 +85,23 @@ fn final_target_name(path: &PathBuf) -> Option<PathBuf> {
         return None;
     }
 
-    return Some(
-        canonicalize(
-            root.join(path.parent().expect("Why is there no parent?"))
-                .join(sub_target),
-        )
-        .expect("Why can't I canonicalize this?"),
-    );
+    match canonicalize(
+        root.join(path.parent().expect("Why is there no parent?"))
+            .join(sub_target),
+    ) {
+        Ok(target) => Some(target),
+        Err(err) => {
+            Messenger::new()
+                .with_verb("skipping")
+                .with_path(&root.join(path))
+                .warning(Some(format!(
+                    "Could not find symlink target due to error: {}",
+                    &err
+                )));
+
+            None
+        }
+    }
 }
 
 pub fn has_bad_underscore(path: &PathBuf) -> bool {
